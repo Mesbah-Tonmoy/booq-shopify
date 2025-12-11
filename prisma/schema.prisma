@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "mysql"
+  url      = "mysql://root:@localhost:3306/booq"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model Shop {
+  id                 Int                @id @default(autoincrement())
+  domain             String             @unique
+  accessToken        String
+  email              String?
+  plan               String             @default("free")
+  shopifyPlan        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  locations          Location[]
+  staffs             Staff[]
+  staffGroups        StaffGroup[]
+  serviceCategories  ServiceCategory[]
+}
+
+model Location {
+  id            Int     @id @default(autoincrement())
+  name          String
+  address       Json?
+  country       String
+  timezone      String  @default("Asia/Dhaka")
+  status        String  @default("enabled")
+  email         String?
+  phone         String?
+  website       String?
+  maxCapacity   Int?    @default(10)
+  workingHours  Json?
+  blockoutDates Json?
+
+  details      String?
+  instructions String?
+
+  createdAt DateTime @default(now())
+
+  shopId Int
+  shop   Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  staffs Staff[]
+}
+
+model Staff {
+  id            Int     @id @default(autoincrement())
+  name          String
+  email         String?
+  phone         String
+  bio           String?
+  photoUrl      String?
+  timezone      String?
+  status        String  @default("active")
+  menuOrderBy   Int     @default(0)
+  maxCapacity   Int
+  blockoutDates Json?
+
+  createdAt DateTime @default(now())
+
+  shopId       Int
+  shop         Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  locationId   Int?
+  location     Location?   @relation(fields: [locationId], references: [id])
+  staffGroupId Int?
+  staffGroup   StaffGroup? @relation(fields: [staffGroupId], references: [id])
+}
+
+model StaffGroup {
+  id   Int    @id @default(autoincrement())
+  name String
+  slug String
+
+  shopId Int
+  shop   Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  staffs Staff[]
+
+  @@unique([shopId, slug])
+}
+
+model ServiceCategory {
+  id   Int    @id @default(autoincrement())
+  name String
+  slug String
+
+  shopId Int
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, slug])
+}
