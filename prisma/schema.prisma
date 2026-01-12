@@ -44,6 +44,8 @@ model Shop {
   staffs             Staff[]
   staffGroups        StaffGroup[]
   serviceCategories  ServiceCategory[]
+  services           Service[]
+  GeneralSettings    GeneralSettings?
 }
 
 model Location {
@@ -114,4 +116,56 @@ model ServiceCategory {
   shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, slug])
+}
+
+model Service {
+  id                Int      @id @default(autoincrement())
+  name              String
+  category          String?
+  timezone          String   @default("Eastern time (ET)")
+  
+  // Product/Slot Configuration
+  shopifyProductId  String?
+  shopifyVariantIds Json?    // Array of selected variant IDs
+  duration          Int      @default(60) // in minutes
+  durationUnit      String   @default("Minutes") // Minutes, Hours, Days
+  
+  // Booking Type
+  bookingType       String   @default("general") // general, bundle
+  serviceType       String   @default("regular") // regular, full-day, multi-day
+  
+  // Multi-day settings
+  minDays           Int?     @default(1)
+  maxDays           Int?     @default(1)
+  multiDayBooking   String?  @default("flexible") // flexible, consecutive
+  allowedDays       Json?    // Array of allowed days for multi-day booking
+  
+  // Slot Configuration (time slots for each day)
+  slotConfiguration Json?    // {monday: [{start: "9:00 AM", end: "9:00 AM"}], tuesday: [...], ...}
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  shopId            Int
+  shop              Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model GeneralSettings {
+  id                           Int      @id @default(autoincrement())
+  weekStartsOn                 String   @default("Sunday")
+  timezone                     String   @default("Asia/Dhaka")
+  dateFormat                   String   @default("Default (Eg: Sun, 31 Dec 2023)")
+  timeFormat                   String   @default("12-hour format (Eg: 2 PM)")
+  cancellationPolicy           String   @default("Strict-48 hours notice")
+  slotReservationTime          String   @default("5 min")
+  bookingRedirection           String   @default("Cart page")
+  paymentStatus                String   @default("Paid")
+  timezoneHandling             String   @default("Customer time zone")
+  universalBookingLink         Boolean  @default(true)
+  automaticTimezoneDetection   Boolean  @default(true)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  shopId Int  @unique
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }

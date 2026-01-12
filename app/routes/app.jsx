@@ -17,10 +17,12 @@ export default function App() {
     <AppProvider embedded apiKey={apiKey}>
       <s-app-nav>
         <s-link href="/app">Home</s-link>
+        <s-link href="/app/service">Service</s-link>
         <s-link href="/app/service-category">Service Category</s-link>
         <s-link href="/app/location">Location</s-link>
         <s-link href="/app/staff">Staff</s-link>
         <s-link href="/app/staff-group">Staff Group</s-link>
+        <s-link href="/app/settings">Settings</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>
