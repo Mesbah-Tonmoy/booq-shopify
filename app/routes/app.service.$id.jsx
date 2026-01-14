@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Form, useActionData, useLoaderData, useNavigation, useParams } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation, useNavigate, useParams } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
@@ -15,7 +15,7 @@ import {
 
 // Loader - Load service, locations and staff
 export const loader = async ({ request, params }) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const serviceId = parseInt(params.id);
 
   // Get shop
@@ -27,13 +27,73 @@ export const loader = async ({ request, params }) => {
     throw new Error("Shop not found");
   }
 
-  // Load service
+  // Load service with slots
   const service = await prisma.service.findUnique({
     where: { id: serviceId, shopId: shop.id },
+    include: {
+      slots: true,
+    },
   });
 
   if (!service) {
     throw new Error("Service not found");
+  }
+
+  // Merge slot configuration into service object for easier access in components
+  if (service.slots && service.slots.length > 0) {
+    service.slotConfiguration = service.slots[0].slotConfiguration;
+  }
+
+  // Fetch product data from Shopify if product is linked
+  if (service.shopifyProductId) {
+    try {
+      const productId = service.shopifyProductId.replace('gid://shopify/Product/', '');
+      const response = await admin.graphql(
+        `#graphql
+          query getProduct($id: ID!) {
+            product(id: $id) {
+              id
+              title
+              variants(first: 100) {
+                edges {
+                  node {
+                    id
+                    title
+                    price
+                    image {
+                      url
+                    }
+                  }
+                }
+              }
+            }
+          }`,
+        {
+          variables: {
+            id: service.shopifyProductId,
+          },
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.data?.product) {
+        const product = data.data.product;
+        service.productData = {
+          id: product.id,
+          title: product.title,
+          variants: product.variants.edges.map(edge => ({
+            id: edge.node.id,
+            title: edge.node.title,
+            price: edge.node.price,
+            image: edge.node.image ? { src: edge.node.image.url } : null,
+          })),
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching product from Shopify:', error);
+      // Continue without product data
+    }
   }
 
   // Load locations and staff
@@ -84,17 +144,33 @@ export const action = async ({ request, params }) => {
   const name = formData.get("name");
   const category = formData.get("category");
   const timezone = formData.get("timezone");
-  const bookingType = formData.get("bookingType");
   const serviceType = formData.get("serviceType");
   const shopifyProductId = formData.get("shopifyProductId");
   const shopifyVariantIds = formData.get("shopifyVariantIds");
-  const duration = parseInt(formData.get("duration")) || 60;
-  const durationUnit = formData.get("durationUnit") || "Minutes";
-  const slotConfiguration = formData.get("slotConfiguration");
   const minDays = formData.get("minDays") ? parseInt(formData.get("minDays")) : null;
   const maxDays = formData.get("maxDays") ? parseInt(formData.get("maxDays")) : null;
   const multiDayBooking = formData.get("multiDayBooking");
   const allowedDays = formData.get("allowedDays");
+  const capacity = formData.get("capacity") ? parseInt(formData.get("capacity")) : null;
+
+  // Parse JSON fields
+  const bundleBooking = formData.get("bundleBooking");
+  const cancelBooking = formData.get("cancelBooking");
+  const paymentPreferences = formData.get("paymentPreferences");
+  const customerFields = formData.get("customerFields");
+  const selectedLocations = formData.get("selectedLocations");
+  const selectedStaff = formData.get("selectedStaff");
+  const locationType = formData.get("locationType") || null;
+
+  // Parse "Others" tab fields
+  const minimumAdvancedNotice = formData.get("minimumAdvancedNotice") ? parseInt(formData.get("minimumAdvancedNotice")) : null;
+  const minimumAdvancedNoticeUnit = formData.get("minimumAdvancedNoticeUnit");
+  const serviceVisibilityDays = formData.get("serviceVisibilityDays") ? parseInt(formData.get("serviceVisibilityDays")) : null;
+  const maxProductQuantities = formData.get("maxProductQuantities") ? parseInt(formData.get("maxProductQuantities")) : null;
+  const notificationEmail = formData.get("notificationEmail");
+  const allowReschedule = formData.get("allowReschedule") === "true";
+  const hideLocationSelection = formData.get("hideLocationSelection") === "true";
+  const hideStaffSelection = formData.get("hideStaffSelection") === "true";
 
   // Validate required fields
   if (!name || name.trim() === "") {
@@ -105,31 +181,61 @@ export const action = async ({ request, params }) => {
     name: name.trim(),
     category: category || null,
     timezone,
-    bookingType,
     serviceType,
     shopifyProductId: shopifyProductId || null,
     shopifyVariantIds: shopifyVariantIds ? JSON.parse(shopifyVariantIds) : null,
-    duration,
-    durationUnit,
-    slotConfiguration: slotConfiguration ? JSON.parse(slotConfiguration) : null,
     minDays,
     maxDays,
     multiDayBooking,
     allowedDays: allowedDays ? JSON.parse(allowedDays) : null,
+    capacity,
+    bundleBooking: bundleBooking ? JSON.parse(bundleBooking) : null,
+    cancelBooking: cancelBooking ? JSON.parse(cancelBooking) : null,
+    paymentPreferences: paymentPreferences ? JSON.parse(paymentPreferences) : null,
+    customerFields: customerFields ? JSON.parse(customerFields) : null,
+    selectedLocations: selectedLocations ? JSON.parse(selectedLocations) : null,
+    selectedStaff: selectedStaff ? JSON.parse(selectedStaff) : null,
+    locationType,
+    minimumAdvancedNotice,
+    minimumAdvancedNoticeUnit,
+    serviceVisibilityDays,
+    maxProductQuantities,
+    notificationEmail: notificationEmail || null,
+    allowReschedule,
+    hideLocationSelection,
+    hideStaffSelection,
   };
 
-  await prisma.service.update({
+  const updatedService = await prisma.service.update({
     where: { id: serviceId },
     data: serviceData,
   });
+
+  // Handle slot configuration - save to Slots table
+  const slotConfiguration = formData.get("slotConfiguration");
+  if (slotConfiguration) {
+    // Delete existing slots for this service
+    await prisma.slots.deleteMany({
+      where: { serviceId: serviceId },
+    });
+
+    // Create new slot entry
+    await prisma.slots.create({
+      data: {
+        serviceId: serviceId,
+        slotConfiguration: JSON.parse(slotConfiguration),
+      },
+    });
+  }
   
-  return { success: true, message: "Service updated successfully", redirect: "/app/service" };
+  return { success: true, message: "Service updated successfully" };
 };
 
 export default function EditServicePage() {
   const actionData = useActionData();
   const loaderData = useLoaderData();
   const navigation = useNavigation();
+  const navigate = useNavigate();
   const shopify = useAppBridge();
   const params = useParams();
 
@@ -144,14 +250,12 @@ export default function EditServicePage() {
   useEffect(() => {
     if (actionData?.success) {
       shopify.toast.show(actionData.message);
-      if (actionData.redirect) {
-        window.location.href = actionData.redirect;
-      }
+      navigate("/app/service");
     }
     if (actionData?.error) {
       shopify.toast.show(actionData.error, { isError: true });
     }
-  }, [actionData, shopify]);
+  }, [actionData, shopify, navigate]);
 
   const handleSubmit = () => {
     const form = document.getElementById("service-form");

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation, useNavigate } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
@@ -64,17 +64,33 @@ export const action = async ({ request }) => {
   const name = formData.get("name");
   const category = formData.get("category");
   const timezone = formData.get("timezone");
-  const bookingType = formData.get("bookingType");
   const serviceType = formData.get("serviceType");
   const shopifyProductId = formData.get("shopifyProductId");
   const shopifyVariantIds = formData.get("shopifyVariantIds");
-  const duration = parseInt(formData.get("duration")) || 60;
-  const durationUnit = formData.get("durationUnit") || "Minutes";
-  const slotConfiguration = formData.get("slotConfiguration");
   const minDays = formData.get("minDays") ? parseInt(formData.get("minDays")) : null;
   const maxDays = formData.get("maxDays") ? parseInt(formData.get("maxDays")) : null;
   const multiDayBooking = formData.get("multiDayBooking");
   const allowedDays = formData.get("allowedDays");
+  const capacity = formData.get("capacity") ? parseInt(formData.get("capacity")) : null;
+
+  // Parse JSON fields
+  const bundleBooking = formData.get("bundleBooking");
+  const cancelBooking = formData.get("cancelBooking");
+  const paymentPreferences = formData.get("paymentPreferences");
+  const customerFields = formData.get("customerFields");
+  const selectedLocations = formData.get("selectedLocations");
+  const selectedStaff = formData.get("selectedStaff");
+  const locationType = formData.get("locationType") || null;
+
+  // Parse "Others" tab fields
+  const minimumAdvancedNotice = formData.get("minimumAdvancedNotice") ? parseInt(formData.get("minimumAdvancedNotice")) : null;
+  const minimumAdvancedNoticeUnit = formData.get("minimumAdvancedNoticeUnit");
+  const serviceVisibilityDays = formData.get("serviceVisibilityDays") ? parseInt(formData.get("serviceVisibilityDays")) : null;
+  const maxProductQuantities = formData.get("maxProductQuantities") ? parseInt(formData.get("maxProductQuantities")) : null;
+  const notificationEmail = formData.get("notificationEmail");
+  const allowReschedule = formData.get("allowReschedule") === "true";
+  const hideLocationSelection = formData.get("hideLocationSelection") === "true";
+  const hideStaffSelection = formData.get("hideStaffSelection") === "true";
 
   // Validate required fields
   if (!name || name.trim() === "") {
@@ -85,31 +101,55 @@ export const action = async ({ request }) => {
     name: name.trim(),
     category: category || null,
     timezone,
-    bookingType,
     serviceType,
     shopifyProductId: shopifyProductId || null,
     shopifyVariantIds: shopifyVariantIds ? JSON.parse(shopifyVariantIds) : null,
-    duration,
-    durationUnit,
-    slotConfiguration: slotConfiguration ? JSON.parse(slotConfiguration) : null,
     minDays,
     maxDays,
     multiDayBooking,
     allowedDays: allowedDays ? JSON.parse(allowedDays) : null,
+    capacity,
+    bundleBooking: bundleBooking ? JSON.parse(bundleBooking) : null,
+    cancelBooking: cancelBooking ? JSON.parse(cancelBooking) : null,
+    paymentPreferences: paymentPreferences ? JSON.parse(paymentPreferences) : null,
+    customerFields: customerFields ? JSON.parse(customerFields) : null,
+    selectedLocations: selectedLocations ? JSON.parse(selectedLocations) : null,
+    selectedStaff: selectedStaff ? JSON.parse(selectedStaff) : null,
+    locationType,
+    minimumAdvancedNotice,
+    minimumAdvancedNoticeUnit,
+    serviceVisibilityDays,
+    maxProductQuantities,
+    notificationEmail: notificationEmail || null,
+    allowReschedule,
+    hideLocationSelection,
+    hideStaffSelection,
     shopId: shop.id,
   };
 
-  await prisma.service.create({
+  const newService = await prisma.service.create({
     data: serviceData,
   });
+
+  // Handle slot configuration - save to Slots table
+  const slotConfiguration = formData.get("slotConfiguration");
+  if (slotConfiguration) {
+    await prisma.slots.create({
+      data: {
+        serviceId: newService.id,
+        slotConfiguration: JSON.parse(slotConfiguration),
+      },
+    });
+  }
   
-  return { success: true, message: "Service created successfully", redirect: "/app/service" };
+  return { success: true, message: "Service created successfully" };
 };
 
 export default function NewServicePage() {
   const actionData = useActionData();
   const loaderData = useLoaderData();
   const navigation = useNavigation();
+  const navigate = useNavigate();
   const shopify = useAppBridge();
 
   const [selectedTab, setSelectedTab] = useState(0);
@@ -122,14 +162,12 @@ export default function NewServicePage() {
   useEffect(() => {
     if (actionData?.success) {
       shopify.toast.show(actionData.message);
-      if (actionData.redirect) {
-        window.location.href = actionData.redirect;
-      }
+      navigate("/app/service");
     }
     if (actionData?.error) {
       shopify.toast.show(actionData.error, { isError: true });
     }
-  }, [actionData, shopify]);
+  }, [actionData, shopify, navigate]);
 
   const handleSubmit = () => {
     const form = document.getElementById("service-form");

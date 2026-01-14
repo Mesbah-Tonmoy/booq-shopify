@@ -120,19 +120,16 @@ model ServiceCategory {
 
 model Service {
   id                Int      @id @default(autoincrement())
+
+  // Product/Slot Configuration
   name              String
   category          String?
-  timezone          String   @default("Eastern time (ET)")
-  
-  // Product/Slot Configuration
   shopifyProductId  String?
   shopifyVariantIds Json?    // Array of selected variant IDs
-  duration          Int      @default(60) // in minutes
-  durationUnit      String   @default("Minutes") // Minutes, Hours, Days
-  
-  // Booking Type
-  bookingType       String   @default("general") // general, bundle
+  timezone          String   @default("Eastern time (ET)")
   serviceType       String   @default("regular") // regular, full-day, multi-day
+  bundleBooking     Json?    // {enabled: boolean, minSlots: number, maxSlots: number}
+  capacity          Int?     // Max bookings per slot
   
   // Multi-day settings
   minDays           Int?     @default(1)
@@ -140,14 +137,40 @@ model Service {
   multiDayBooking   String?  @default("flexible") // flexible, consecutive
   allowedDays       Json?    // Array of allowed days for multi-day booking
   
-  // Slot Configuration (time slots for each day)
-  slotConfiguration Json?    // {monday: [{start: "9:00 AM", end: "9:00 AM"}], tuesday: [...], ...}
+  // Location & Staff Assignment
+  locationType      String?
+  selectedLocations Json?    // Array of location IDs
+  hideLocationSelection Boolean? @default(false)
+  selectedStaff     Json?    // Array of staff IDs
+  hideStaffSelection Boolean? @default(false)
   
+  // Others
+  minimumAdvancedNotice     Int?     @default(0)
+  minimumAdvancedNoticeUnit String?  @default("Hours") // Minutes, Hours, Days
+  serviceVisibilityDays     Int?     @default(60)
+  maxProductQuantities      Int?     @default(5)
+  notificationEmail         String?
+  cancelBooking             Json?    // {allowed: boolean, cutoffTime: string, cutoffUnit: string}
+  allowReschedule           Boolean? @default(false)
+  paymentPreferences        Json?    // {type: string, fullPayment: {...}, bookNowPayLater: {...}}
+  customerFields            Json?    // Array of custom fields [{id, name, label, type, required, visible}]
+  
+  // Status
+  status            String   @default("active") // active, inactive, draft
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
   shopId            Int
   shop              Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  slots             Slots[]
+}
+
+model Slots {
+  id                Int      @id @default(autoincrement())
+  serviceId         Int
+  service           Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  slotConfiguration Json?
 }
 
 model GeneralSettings {

@@ -1,12 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 
 // Product Selection Component
 export function ProductSelectionSection({ formData, serviceCategories = [] }) {
   const [isOpen, setIsOpen] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState(formData?.product || null);
-  const [selectedVariants, setSelectedVariants] = useState(formData?.variants || []);
+  const [selectedCategory, setSelectedCategory] = useState(formData?.category || "");
+  const [selectedProduct, setSelectedProduct] = useState(formData?.productData || null);
+  const [selectedVariants, setSelectedVariants] = useState(() => {
+    // Initialize from saved product data if available
+    if (formData?.productData && formData?.shopifyVariantIds) {
+      return formData.productData.variants?.filter(v => 
+        formData.shopifyVariantIds.includes(v.id)
+      ) || [];
+    }
+    return [];
+  });
   const shopify = useAppBridge();
 
   const hasProduct = selectedProduct !== null;
@@ -84,8 +93,8 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
             <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
               <s-text type="strong">Category</s-text>
               <s-select
-                name="category"
-                defaultValue={formData?.category || ""}
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
               >
                 <s-option value="">Select a category</s-option>
                 {serviceCategories.map((category) => (
@@ -99,6 +108,9 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
               Choose a category for this service
             </s-text>
           </s-stack>
+          
+          {/* Hidden input for category */}
+          <input type="hidden" name="category" value={selectedCategory} />
 
           {/* Product Link */}
           <s-stack gap="small-300">
@@ -120,9 +132,14 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
                 </s-button>
               </s-grid-item>
             </s-grid>
-            {!hasProduct && (
+            {!hasProduct && !formData?.shopifyProductId && (
               <s-text color="subdued">
                 No Product selected. Click "Select Product" to choose a shopify product for this service.
+              </s-text>
+            )}
+            {!hasProduct && formData?.shopifyProductId && (
+              <s-text color="subdued">
+                Product ID: {formData.shopifyProductId} (Click "Change Product" to select a different product)
               </s-text>
             )}
 
@@ -228,6 +245,7 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
         </s-stack>
       )}
 
+      {/* Hidden inputs for product data */}
       <input type="hidden" name="shopifyProductId" value={selectedProduct?.id || ""} />
       <input type="hidden" name="shopifyVariantIds" value={JSON.stringify(selectedVariants.map(v => v.id))} />
     </s-section>
@@ -272,9 +290,6 @@ export function SlotConfigurationSection({ formData, currentServiceType }) {
 
       <div style={{ display: isOpen ? "block" : "none" }}>
         <s-stack direction="block" gap="base">
-          {/* Booking Type */}
-          <BookingTypeSelector formData={formData} />
-
           {/* Service Type */}
           <ServiceTypeSelector formData={formData} />
 
@@ -732,7 +747,10 @@ export function ServiceTypeSelector({ formData }) {
 
 // Bundle Booking Section
 export function BundleBookingSection({ formData, currentServiceType }) {
-  const [bundleBookingEnabled, setBundleBookingEnabled] = useState(formData?.bundleBookingEnabled || false);
+  const bundleBooking = formData?.bundleBooking || {};
+  const [bundleBookingEnabled, setBundleBookingEnabled] = useState(bundleBooking?.enabled || false);
+  const [minSlots, setMinSlots] = useState(bundleBooking?.minSlots || "");
+  const [maxSlots, setMaxSlots] = useState(bundleBooking?.maxSlots || "");
 
   // Only show if service type is regular
   if (currentServiceType !== "regular") {
@@ -744,22 +762,21 @@ export function BundleBookingSection({ formData, currentServiceType }) {
     setBundleBookingEnabled(e.target.checked);
   };
 
+  // Create JSON object for hidden input
+  const bundleBookingData = {
+    enabled: bundleBookingEnabled,
+    minSlots: minSlots ? parseInt(minSlots) : null,
+    maxSlots: maxSlots ? parseInt(maxSlots) : null,
+  };
+
   return (
     <s-box padding="base" border="base" borderRadius="base" style={{ marginTop: "1rem" }}>
-      <div 
-        style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: bundleBookingEnabled ? "1rem" : "0" }}
+      <s-checkbox
+        checked={bundleBookingEnabled}
+        onChange={handleCheckboxChange}
         onClick={(e) => e.stopPropagation()}
-      >
-        <input
-          type="checkbox"
-          name="bundleBookingEnabled"
-          checked={bundleBookingEnabled}
-          onChange={handleCheckboxChange}
-          onClick={(e) => e.stopPropagation()}
-          style={{ width: "20px", height: "20px", cursor: "pointer" }}
-        />
-        <s-text variant="body-sm" fontWeight="semibold">Bundle Booking</s-text>
-      </div>
+        label="Bundle Booking"
+      />
 
       {bundleBookingEnabled && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1rem" }}>
@@ -769,10 +786,10 @@ export function BundleBookingSection({ formData, currentServiceType }) {
             </s-text>
             <s-text-field
               type="number"
-              name="minSlotsToBook"
               placeholder="Eg:1"
               suffix="Slots"
-              defaultValue={formData?.minSlotsToBook || ""}
+              value={minSlots}
+              onChange={(e) => setMinSlots(e.target.value)}
               min="1"
             />
           </div>
@@ -782,44 +799,18 @@ export function BundleBookingSection({ formData, currentServiceType }) {
             </s-text>
             <s-text-field
               type="number"
-              name="maxSlotsPerBook"
               placeholder="Eg:5"
               suffix="Slots"
-              defaultValue={formData?.maxSlotsPerBook || ""}
+              value={maxSlots}
+              onChange={(e) => setMaxSlots(e.target.value)}
               min="1"
             />
           </div>
         </div>
       )}
+
+      <input type="hidden" name="bundleBooking" value={JSON.stringify(bundleBookingData)} />
     </s-box>
-  );
-}
-
-// Booking Type Selection
-export function BookingTypeSelector({ formData }) {
-  const [bookingType, setBookingType] = useState(formData?.bookingType || "general");
-
-  return (
-    <s-form-field>
-      <s-text variant="body-sm" fontWeight="semibold">Booking Type</s-text>
-
-      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-        <s-button
-          variant={bookingType === "general" ? "primary" : "secondary"}
-          onClick={() => setBookingType("general")}
-        >
-          General Booking
-        </s-button>
-        <s-button
-          variant={bookingType === "bundle" ? "primary" : "secondary"}
-          onClick={() => setBookingType("bundle")}
-        >
-          Bundle Booking
-        </s-button>
-      </div>
-
-      <input type="hidden" name="bookingType" value={bookingType} />
-    </s-form-field>
   );
 }
 
@@ -1084,7 +1075,17 @@ function NotificationEmail({ formData }) {
 // Cancel Bookings Component
 function CancelBookings({ formData }) {
   const [isOpen, setIsOpen] = useState(true);
-  const [allowCancel, setAllowCancel] = useState(formData?.allowCancel || false);
+  const cancelBooking = formData?.cancelBooking || {};
+  const [allowCancel, setAllowCancel] = useState(cancelBooking?.allowed || false);
+  const [cutoffTime, setCutoffTime] = useState(cancelBooking?.cutoffTime || "");
+  const [cutoffUnit, setCutoffUnit] = useState(cancelBooking?.cutoffUnit || "Hours");
+
+  // Create JSON object for hidden input
+  const cancelBookingData = {
+    allowed: allowCancel,
+    cutoffTime: cutoffTime,
+    cutoffUnit: cutoffUnit,
+  };
 
   return (
     <s-section>
@@ -1109,7 +1110,6 @@ function CancelBookings({ formData }) {
           <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
             <input
               type="checkbox"
-              name="allowCancel"
               checked={allowCancel}
               onChange={(e) => setAllowCancel(e.target.checked)}
             />
@@ -1122,12 +1122,12 @@ function CancelBookings({ formData }) {
               <s-stack direction="inline" gap="small-300" alignItems="center">
                 <s-text-field
                   type="text"
-                  name="cancelCutoffTime"
                   placeholder="Eg: 2 H"
-                  defaultValue={formData?.cancelCutoffTime || ""}
+                  value={cutoffTime}
+                  onChange={(e) => setCutoffTime(e.target.value)}
                   style={{ width: "200px" }}
                 />
-                <s-select name="cancelCutoffUnit" defaultValue={formData?.cancelCutoffUnit || "Hours"}>
+                <s-select value={cutoffUnit} onChange={(e) => setCutoffUnit(e.target.value)}>
                   <s-option value="Hours">Hours</s-option>
                   <s-option value="Days">Days</s-option>
                 </s-select>
@@ -1137,6 +1137,8 @@ function CancelBookings({ formData }) {
               </s-text>
             </s-stack>
           )}
+
+          <input type="hidden" name="cancelBooking" value={JSON.stringify(cancelBookingData)} />
         </s-stack>
       )}
     </s-section>
@@ -1184,7 +1186,13 @@ function RescheduleBookings({ formData }) {
 // Payment Preferences Component
 function PaymentPreferences({ formData }) {
   const [isOpen, setIsOpen] = useState(true);
-  const [paymentType, setPaymentType] = useState(formData?.paymentType || "fullPayment");
+  const paymentPrefs = formData?.paymentPreferences || {};
+  const [paymentType, setPaymentType] = useState(paymentPrefs?.type || "fullPayment");
+  const [fullPaymentName, setFullPaymentName] = useState(paymentPrefs?.fullPayment?.name || "Full payment");
+  const [fullPaymentLabel, setFullPaymentLabel] = useState(paymentPrefs?.fullPayment?.label || "Full payment");
+  const [fullPaymentDescription, setFullPaymentDescription] = useState(paymentPrefs?.fullPayment?.description || "You are required to pay the full amount upfront to confirm the booking.");
+  const [bookNowPayLaterName, setBookNowPayLaterName] = useState(paymentPrefs?.bookNowPayLater?.name || "Book now, pay later");
+  const [bookNowPayLaterDescription, setBookNowPayLaterDescription] = useState(paymentPrefs?.bookNowPayLater?.description || "You can complete the booking without payment. The payment will be collected later.");
 
   return (
     <s-section>
@@ -1245,8 +1253,8 @@ function PaymentPreferences({ formData }) {
                         Name
                       </s-text>
                       <s-text-field
-                        name="fullPaymentName"
-                        defaultValue={formData?.fullPaymentName || "Full payment"}
+                        value={fullPaymentName}
+                        onChange={(e) => setFullPaymentName(e.target.value)}
                       />
                       <s-text color="subdued" variant="body-sm" style={{ display: "block", marginTop: "0.25rem" }}>
                         This name appears on the cart, checkout, and order pages.
@@ -1258,8 +1266,8 @@ function PaymentPreferences({ formData }) {
                         Label
                       </s-text>
                       <s-text-field
-                        name="fullPaymentLabel"
-                        defaultValue={formData?.fullPaymentLabel || "Full payment"}
+                        value={fullPaymentLabel}
+                        onChange={(e) => setFullPaymentLabel(e.target.value)}
                       />
                     </div>
 
@@ -1268,8 +1276,8 @@ function PaymentPreferences({ formData }) {
                         Description
                       </s-text>
                       <s-text-field
-                        name="fullPaymentDescription"
-                        defaultValue={formData?.fullPaymentDescription || "You are required to pay the full amount upfront to confirm the booking."}
+                        value={fullPaymentDescription}
+                        onChange={(e) => setFullPaymentDescription(e.target.value)}
                       />
                     </div>
                   </s-stack>
@@ -1311,8 +1319,8 @@ function PaymentPreferences({ formData }) {
                         Name
                       </s-text>
                       <s-text-field
-                        name="bookNowPayLaterName"
-                        defaultValue={formData?.bookNowPayLaterName || "Book now, pay later"}
+                        value={bookNowPayLaterName}
+                        onChange={(e) => setBookNowPayLaterName(e.target.value)}
                       />
                       <s-text color="subdued" variant="body-sm" style={{ display: "block", marginTop: "0.25rem" }}>
                         This name appears on the cart, checkout, and order pages.
@@ -1324,8 +1332,8 @@ function PaymentPreferences({ formData }) {
                         Description
                       </s-text>
                       <s-text-field
-                        name="bookNowPayLaterDescription"
-                        defaultValue={formData?.bookNowPayLaterDescription || "You can complete the booking without payment. The payment will be collected later."}
+                        value={bookNowPayLaterDescription}
+                        onChange={(e) => setBookNowPayLaterDescription(e.target.value)}
                       />
                     </div>
                   </s-stack>
@@ -1333,6 +1341,24 @@ function PaymentPreferences({ formData }) {
               )}
             </div>
           </div>
+
+          {/* Hidden input for payment preferences JSON */}
+          <input
+            type="hidden"
+            name="paymentPreferences"
+            value={JSON.stringify({
+              type: paymentType,
+              fullPayment: {
+                name: fullPaymentName,
+                label: fullPaymentLabel,
+                description: fullPaymentDescription,
+              },
+              bookNowPayLater: {
+                name: bookNowPayLaterName,
+                description: bookNowPayLaterDescription,
+              },
+            })}
+          />
         </s-stack>
       )}
     </s-section>
@@ -1867,13 +1893,12 @@ function BlockOutDateTime({ formData }) {
         paddingBlockEnd={isOpen ? "small-300" : ""}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <s-heading>Block Out Date & Time</s-heading>
+        <s-heading>Location Type</s-heading>
         <s-icon type={isOpen ? "chevron-down" : "chevron-up"}></s-icon>
       </s-stack>
 
       {isOpen && (
         <s-stack gap="small">
-          <s-text type="strong">Location Type</s-text>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <input
@@ -1891,7 +1916,7 @@ function BlockOutDateTime({ formData }) {
                 value="offline"
                 defaultChecked={formData?.locationType?.includes('offline')}
               />
-              <s-text>Off Online</s-text>
+              <s-text>Offline</s-text>
             </label>
           </div>
         </s-stack>
@@ -2032,7 +2057,6 @@ function LocationsSection({ formData, locations }) {
           <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
             <input
               type="checkbox"
-              name="hideLocationSelection"
               checked={hideLocationSelection}
               onChange={(e) => setHideLocationSelection(e.target.checked)}
             />
@@ -2040,6 +2064,7 @@ function LocationsSection({ formData, locations }) {
           </label>
 
           <input type="hidden" name="selectedLocations" value={JSON.stringify(selectedLocations)} />
+          <input type="hidden" name="hideLocationSelection" value={hideLocationSelection} />
         </s-stack>
       )}
 
@@ -2272,7 +2297,6 @@ function StaffMembersSection({ formData, staffMembers }) {
           <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
             <input
               type="checkbox"
-              name="hideStaffSelection"
               checked={hideStaffSelection}
               onChange={(e) => setHideStaffSelection(e.target.checked)}
             />
@@ -2280,6 +2304,7 @@ function StaffMembersSection({ formData, staffMembers }) {
           </label>
 
           <input type="hidden" name="selectedStaff" value={JSON.stringify(selectedStaff)} />
+          <input type="hidden" name="hideStaffSelection" value={hideStaffSelection} />
         </s-stack>
       )}
 
