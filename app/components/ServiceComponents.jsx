@@ -1881,6 +1881,11 @@ export function LocationStaffTabContent({ formData, locations = [], staffMembers
 // Block Out Date & Time Component
 function BlockOutDateTime({ formData }) {
   const [isOpen, setIsOpen] = useState(true);
+  const [locationType, setLocationType] = useState(formData?.locationType || "");
+
+  const handleLocationTypeChange = (type) => {
+    setLocationType(type);
+  };
 
   return (
     <s-section>
@@ -1899,26 +1904,32 @@ function BlockOutDateTime({ formData }) {
 
       {isOpen && (
         <s-stack gap="small">
+          <s-text color="subdued">Select where your service will be provided</s-text>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
               <input
-                type="checkbox"
-                name="locationType"
+                type="radio"
+                name="locationTypeRadio"
                 value="online"
-                defaultChecked={formData?.locationType?.includes('online')}
+                checked={locationType === "online"}
+                onChange={() => handleLocationTypeChange("online")}
               />
               <s-text>Online</s-text>
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
               <input
-                type="checkbox"
-                name="locationType"
+                type="radio"
+                name="locationTypeRadio"
                 value="offline"
-                defaultChecked={formData?.locationType?.includes('offline')}
+                checked={locationType === "offline"}
+                onChange={() => handleLocationTypeChange("offline")}
               />
               <s-text>Offline</s-text>
             </label>
           </div>
+          
+          {/* Hidden input for form submission */}
+          <input type="hidden" name="locationType" value={locationType} />
         </s-stack>
       )}
     </s-section>

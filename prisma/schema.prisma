@@ -45,7 +45,7 @@ model Shop {
   staffGroups        StaffGroup[]
   serviceCategories  ServiceCategory[]
   services           Service[]
-  GeneralSettings    GeneralSettings?
+  settings           Settings?
 }
 
 model Location {
@@ -173,19 +173,30 @@ model Slots {
   slotConfiguration Json?
 }
 
-model GeneralSettings {
+model Settings {
   id                           Int      @id @default(autoincrement())
   weekStartsOn                 String   @default("Sunday")
   timezone                     String   @default("Asia/Dhaka")
   dateFormat                   String   @default("Default (Eg: Sun, 31 Dec 2023)")
   timeFormat                   String   @default("12-hour format (Eg: 2 PM)")
+
+  shopSetting                  Json?
+
   cancellationPolicy           String   @default("Strict-48 hours notice")
   slotReservationTime          String   @default("5 min")
   bookingRedirection           String   @default("Cart page")
   paymentStatus                String   @default("Paid")
-  timezoneHandling             String   @default("Customer time zone")
   universalBookingLink         Boolean  @default(true)
-  automaticTimezoneDetection   Boolean  @default(true)
+  
+  // widget settings
+  widgetSettings Json?
+
+  // notification settings
+  customerNotificationSettings Json?
+  ownerNotificationSettings    Json?
+  emailTemplates               Json?
+  emailConfig                  Json?
+  
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
 

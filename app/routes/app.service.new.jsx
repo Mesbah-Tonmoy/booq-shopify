@@ -155,6 +155,7 @@ export default function NewServicePage() {
   const [selectedTab, setSelectedTab] = useState(0);
   const [formKey] = useState(0);
   const [currentServiceType, setCurrentServiceType] = useState("regular");
+  const [validationErrors, setValidationErrors] = useState([]);
 
   const isSubmitting = navigation.state === "submitting";
 
@@ -186,6 +187,91 @@ export default function NewServicePage() {
     setCurrentServiceType(value);
   };
 
+  // Validate current step
+  const validateStep = (step) => {
+    const form = document.getElementById("service-form");
+    const errors = [];
+
+    if (step === 0) {
+      // Step 1: Product/Slot configuration
+      const serviceName = form.querySelector('[name="name"]')?.value;
+      if (!serviceName || serviceName.trim() === "") {
+        errors.push("Service name is required");
+      }
+
+      const productId = form.querySelector('[name="shopifyProductId"]')?.value;
+      if (!productId) {
+        errors.push("Product link is required");
+      }
+
+      const serviceType = form.querySelector('[name="serviceType"]')?.value;
+      if (!serviceType) {
+        errors.push("Service type is required");
+      }
+
+      const slotConfiguration = form.querySelector('[name="slotConfiguration"]')?.value;
+      if (!slotConfiguration || slotConfiguration === '{}') {
+        errors.push("Slot configuration is required");
+      }
+    } else if (step === 1) {
+      // Step 2: Location & Staff
+      const locationType = form.querySelector('[name="locationType"]')?.value;
+      if (!locationType) {
+        errors.push("Location type is required");
+      }
+    } else if (step === 2) {
+      // Step 3: Others
+      const paymentPreferences = form.querySelector('[name="paymentPreferences"]')?.value;
+      if (!paymentPreferences) {
+        errors.push("Payment preference is required");
+      }
+    }
+
+    return errors;
+  };
+
+  // Handle next button
+  const handleNext = () => {
+    const errors = validateStep(selectedTab);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      shopify.toast.show(errors.join(", "), { isError: true });
+      return;
+    }
+    setValidationErrors([]);
+    setSelectedTab(selectedTab + 1);
+  };
+
+  // Handle previous button
+  const handlePrevious = () => {
+    setValidationErrors([]);
+    setSelectedTab(selectedTab - 1);
+  };
+
+  // Handle step click (with validation)
+  const handleStepClick = (targetStep) => {
+    // If going backwards, allow without validation
+    if (targetStep < selectedTab) {
+      setValidationErrors([]);
+      setSelectedTab(targetStep);
+      return;
+    }
+
+    // If going forward, validate all steps in between
+    for (let step = selectedTab; step < targetStep; step++) {
+      const errors = validateStep(step);
+      if (errors.length > 0) {
+        setValidationErrors(errors);
+        shopify.toast.show(`Please complete Step ${step + 1}: ${errors.join(", ")}`, { isError: true });
+        return;
+      }
+    }
+
+    // All validations passed
+    setValidationErrors([]);
+    setSelectedTab(targetStep);
+  };
+
   const tabs = [
     "Product/Slot configuration",
     "Location & Staff Member",
@@ -195,14 +281,6 @@ export default function NewServicePage() {
 
   return (
     <s-page heading="Add New Service" badge="New">
-      <s-button
-        slot="primary-action"
-        variant="primary"
-        onClick={handleSubmit}
-        {...(isSubmitting ? { loading: true } : {})}
-      >
-        Save Service
-      </s-button>
 
       <Form method="post" id="service-form" key={formKey} onChange={handleServiceTypeChange}>
         <input
@@ -219,7 +297,7 @@ export default function NewServicePage() {
                 <button
                   key={index}
                   type="button"
-                  onClick={() => setSelectedTab(index)}
+                  onClick={() => handleStepClick(index)}
                   style={{
                     padding: "0.5rem 1rem",
                     background: selectedTab === index ? "#E3E3E3" : "transparent",
@@ -273,6 +351,34 @@ export default function NewServicePage() {
               staffMembers={loaderData?.staffMembers || []} 
               onTabChange={setSelectedTab}
             />
+          </div>
+
+          {/* Navigation Buttons */}
+          <div style={{ padding: "1.5rem", borderTop: "1px solid #e1e3e5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              {selectedTab > 0 && (
+                <s-button onClick={handlePrevious}>
+                  <s-icon type="arrow-left"></s-icon>
+                  Previous
+                </s-button>
+              )}
+            </div>
+            <div>
+              {selectedTab < 3 ? (
+                <s-button variant="primary" onClick={handleNext}>
+                  Next
+                  <s-icon type="arrow-right"></s-icon>
+                </s-button>
+              ) : (
+                <s-button 
+                  variant="primary" 
+                  onClick={handleSubmit}
+                  {...(isSubmitting ? { loading: true } : {})}
+                >
+                  Save Service
+                </s-button>
+              )}
+            </div>
           </div>
         </s-card>
       </Form>
