@@ -141,7 +141,7 @@ export const action = async ({ request }) => {
       },
     });
   }
-  
+
   return { success: true, message: "Service created successfully" };
 };
 
@@ -183,8 +183,10 @@ export default function NewServicePage() {
 
   // Listen to service type changes
   const handleServiceTypeChange = (e) => {
-    const value = e.target.value;
-    setCurrentServiceType(value);
+    if (e.target.name === "serviceTypeRadio") {
+      const value = e.target.value;
+      setCurrentServiceType(value);
+    }
   };
 
   // Validate current step
@@ -331,10 +333,10 @@ export default function NewServicePage() {
 
           {/* Tab 1: Location & Staff Member */}
           <div style={{ padding: "1.5rem", display: selectedTab === 1 ? "block" : "none" }}>
-            <LocationStaffTabContent 
-              formData={null} 
-              locations={loaderData?.locations || []} 
-              staffMembers={loaderData?.staffMembers || []} 
+            <LocationStaffTabContent
+              formData={null}
+              locations={loaderData?.locations || []}
+              staffMembers={loaderData?.staffMembers || []}
             />
           </div>
 
@@ -345,10 +347,10 @@ export default function NewServicePage() {
 
           {/* Tab 3: Review & Publish */}
           <div style={{ padding: "1.5rem", display: selectedTab === 3 ? "block" : "none" }}>
-            <ReviewPublishTabContent 
-              formData={null} 
-              locations={loaderData?.locations || []} 
-              staffMembers={loaderData?.staffMembers || []} 
+            <ReviewPublishTabContent
+              formData={null}
+              locations={loaderData?.locations || []}
+              staffMembers={loaderData?.staffMembers || []}
               onTabChange={setSelectedTab}
             />
           </div>
@@ -370,8 +372,8 @@ export default function NewServicePage() {
                   <s-icon type="arrow-right"></s-icon>
                 </s-button>
               ) : (
-                <s-button 
-                  variant="primary" 
+                <s-button
+                  variant="primary"
                   onClick={handleSubmit}
                   {...(isSubmitting ? { loading: true } : {})}
                 >

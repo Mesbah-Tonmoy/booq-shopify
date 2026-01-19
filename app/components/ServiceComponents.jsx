@@ -10,7 +10,7 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
   const [selectedVariants, setSelectedVariants] = useState(() => {
     // Initialize from saved product data if available
     if (formData?.productData && formData?.shopifyVariantIds) {
-      return formData.productData.variants?.filter(v => 
+      return formData.productData.variants?.filter(v =>
         formData.shopifyVariantIds.includes(v.id)
       ) || [];
     }
@@ -108,7 +108,7 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
               Choose a category for this service
             </s-text>
           </s-stack>
-          
+
           {/* Hidden input for category */}
           <input type="hidden" name="category" value={selectedCategory} />
 
@@ -248,6 +248,16 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
       {/* Hidden inputs for product data */}
       <input type="hidden" name="shopifyProductId" value={selectedProduct?.id || ""} />
       <input type="hidden" name="shopifyVariantIds" value={JSON.stringify(selectedVariants.map(v => v.id))} />
+      <input type="hidden" name="productData" value={selectedProduct && selectedVariants.length > 0 ? JSON.stringify({
+        id: selectedProduct.id,
+        title: selectedProduct.title,
+        variants: selectedVariants.map(v => ({
+          id: v.id,
+          title: v.title,
+          price: v.price,
+          image: v.image
+        }))
+      }) : ""} />
     </s-section>
   );
 }
@@ -271,7 +281,7 @@ export function SlotConfigurationSection({ formData, currentServiceType }) {
         tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
             e.preventDefault();
             setIsOpen(!isOpen);
           }
@@ -314,122 +324,93 @@ export function SlotConfigurationSection({ formData, currentServiceType }) {
 
 // Slot Configuration for Regular Booking
 export function RegularSlotConfiguration({ formData }) {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-
-  const defaultSlots = formData?.slotConfiguration || {
-    monday: [{ start: "9:00 AM", end: "9:00 AM" }],
-    tuesday: [{ start: "9:00 AM", end: "9:00 AM" }],
-    wednesday: [{ start: "9:00 AM", end: "9:00 AM" }],
-    thursday: [{ start: "9:00 AM", end: "9:00 AM" }],
-    friday: [{ start: "9:00 AM", end: "9:00 AM" }],
-    saturday: [],
-    sunday: [],
-  };
-
+  // Initialize with saved slots or default
+  const defaultSlots = formData?.slotConfiguration?.slots || [{ start: "09:00", end: "17:00" }];
   const [slots, setSlots] = useState(defaultSlots);
 
-  const addSlot = (day) => {
-    setSlots({
-      ...slots,
-      [day]: [...slots[day], { start: "9:00 AM", end: "9:00 AM" }],
-    });
+  const addSlot = () => {
+    setSlots([...slots, { start: "09:00", end: "17:00" }]);
   };
 
-  const removeSlot = (day, index) => {
-    const newSlots = slots[day].filter((_, i) => i !== index);
-    setSlots({
-      ...slots,
-      [day]: newSlots,
-    });
+  const removeSlot = (index) => {
+    if (slots.length > 1) {
+      setSlots(slots.filter((_, i) => i !== index));
+    }
   };
 
-  const updateSlot = (day, index, field, value) => {
-    const newSlots = [...slots[day]];
+  const updateSlot = (index, field, value) => {
+    const newSlots = [...slots];
     newSlots[index][field] = value;
-    setSlots({
-      ...slots,
-      [day]: newSlots,
-    });
+    setSlots(newSlots);
   };
 
   return (
     <div>
-      <div style={{ marginBottom: "1rem" }}>
-        <s-text variant="body-sm" fontWeight="semibold">Set your service duration</s-text>
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-          <div style={{ flex: 1 }}>
-            <s-text-field
-              type="number"
-              name="duration"
-              defaultValue={formData?.duration || 60}
-              min="1"
-            />
-          </div>
-          <div style={{ flex: 1 }}>
-            <s-select name="durationUnit" defaultValue={formData?.durationUnit || "Minutes"}>
-              <option value="Minutes">Minutes</option>
-              <option value="Hours">Hours</option>
-            </s-select>
-          </div>
-        </div>
-      </div>
-
       <div style={{ marginTop: "1.5rem" }}>
-        <s-text variant="heading-sm">Day - Time duration - Add Break</s-text>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <s-text variant="heading-sm">Time Slots</s-text>
+          <s-button
+            size="slim"
+            onClick={addSlot}
+          >
+            Add New Slot
+          </s-button>
+        </div>
 
-        <div style={{ marginTop: "1rem" }}>
-          {dayKeys.map((dayKey, index) => (
-            <div key={dayKey} style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-              <div style={{ width: "60px", paddingTop: "0.5rem" }}>
-                <s-text variant="body-sm">{days[index]}</s-text>
-              </div>
-
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {slots.map((slot, index) => (
+            <div key={index} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
               <div style={{ flex: 1 }}>
-                {slots[dayKey].map((slot, slotIndex) => (
-                  <div key={slotIndex} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", alignItems: "center" }}>
-                    <div style={{ flex: 1 }}>
-                      <s-text-field
-                        type="time"
-                        name={`slot_${dayKey}_${slotIndex}_start`}
-                        value={slot.start}
-                        onChange={(e) => updateSlot(dayKey, slotIndex, 'start', e.target.value)}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <s-text-field
-                        type="time"
-                        name={`slot_${dayKey}_${slotIndex}_end`}
-                        value={slot.end}
-                        onChange={(e) => updateSlot(dayKey, slotIndex, 'end', e.target.value)}
-                      />
-                    </div>
-                    {slots[dayKey].length > 1 && (
-                      <s-button
-                        variant="plain"
-                        icon="delete"
-                        onClick={() => removeSlot(dayKey, slotIndex)}
-                      />
-                    )}
-                  </div>
-                ))}
+                <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "12px", color: "#6b7280" }}>
+                  Start Time
+                </label>
+                <input
+                  type="time"
+                  value={slot.start}
+                  onChange={(e) => updateSlot(index, 'start', e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "4px",
+                    fontSize: "14px",
+                  }}
+                />
               </div>
-
-              <div style={{ paddingTop: "0.25rem" }}>
-                <s-button
-                  variant="plain"
-                  size="slim"
-                  onClick={() => addSlot(dayKey)}
-                >
-                  +
-                </s-button>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "12px", color: "#6b7280" }}>
+                  End Time
+                </label>
+                <input
+                  type="time"
+                  value={slot.end}
+                  onChange={(e) => updateSlot(index, 'end', e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "4px",
+                    fontSize: "14px",
+                  }}
+                />
               </div>
+              {slots.length > 1 && (
+                <div style={{ paddingTop: "1.25rem" }}>
+                  <s-button
+                    variant="plain"
+                    icon="delete"
+                    onClick={() => removeSlot(index)}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      <input type="hidden" name="slotConfiguration" value={JSON.stringify(slots)} />
+      <input type="hidden" name="slotConfiguration" value={JSON.stringify({ slots })} />
     </div>
   );
 }
@@ -1613,6 +1594,73 @@ function CustomerInformation({ formData }) {
 
 // Review & Publish Tab Component
 export function ReviewPublishTabContent({ formData, locations = [], staffMembers = [], onTabChange }) {
+  const [liveFormData, setLiveFormData] = useState({
+    name: "",
+    category: "",
+    serviceType: "",
+    basePrice: "0.00",
+    paymentType: "",
+    locationType: "",
+  });
+
+  // Read form values in real-time for new services (when formData is null)
+  useEffect(() => {
+    const form = document.getElementById("service-form");
+    if (!form) return;
+
+    const updateLiveData = () => {
+      const name = form.querySelector('[name="name"]')?.value || "";
+      const category = form.querySelector('[name="category"]')?.value || "";
+      const serviceType = form.querySelector('[name="serviceType"]')?.value || "";
+      const locationType = form.querySelector('[name="locationType"]')?.value || "";
+
+      // Get price from selected product variants
+      const variantIdsInput = form.querySelector('[name="shopifyVariantIds"]')?.value;
+      let basePrice = "0.00";
+      if (variantIdsInput) {
+        try {
+          const variantIds = JSON.parse(variantIdsInput);
+          // Get the first variant's price from the product data
+          const productDataInput = form.querySelector('[name="productData"]');
+          if (productDataInput) {
+            const productData = JSON.parse(productDataInput.value);
+            const firstVariant = productData.variants?.[0];
+            if (firstVariant) {
+              basePrice = firstVariant.price;
+            }
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+
+      // Get payment type from paymentPreferences JSON
+      const paymentPrefsInput = form.querySelector('[name="paymentPreferences"]')?.value;
+      let paymentType = "";
+      if (paymentPrefsInput) {
+        try {
+          const paymentPrefs = JSON.parse(paymentPrefsInput);
+          paymentType = paymentPrefs.type || "";
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+
+      setLiveFormData({ name, category, serviceType, basePrice, paymentType, locationType });
+    };
+
+    // Update on form changes
+    form.addEventListener("input", updateLiveData);
+    form.addEventListener("change", updateLiveData);
+
+    // Initial update
+    updateLiveData();
+
+    return () => {
+      form.removeEventListener("input", updateLiveData);
+      form.removeEventListener("change", updateLiveData);
+    };
+  }, []);
 
   const getServiceTypeLabel = (type) => {
     switch (type) {
@@ -1718,31 +1766,52 @@ export function ReviewPublishTabContent({ formData, locations = [], staffMembers
           {/* Service Name */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <s-text color="subdued">Service name :</s-text>
-            <s-text type="strong">{formData?.name || "Service name"}</s-text>
+            <s-text type="strong">{formData?.name || liveFormData.name || "Service name"}</s-text>
+          </div>
+
+          {/* Category */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <s-text color="subdued">Category :</s-text>
+            <s-text type="strong">{formData?.category || liveFormData.category || "No category"}</s-text>
           </div>
 
           {/* Service Type */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <s-text color="subdued">Service type :</s-text>
-            <s-text type="strong">{getServiceTypeLabel(formData?.serviceType)}</s-text>
+            <s-text type="strong">{getServiceTypeLabel(formData?.serviceType || liveFormData.serviceType)}</s-text>
           </div>
 
           {/* Status */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <s-text color="subdued">Status :</s-text>
-            <s-badge tone="success">Active and Bookable</s-badge>
+            <s-badge tone={formData?.id ? "success" : "info"}>
+              {formData?.id ? "Active and Bookable" : "Not yet published"}
+            </s-badge>
           </div>
 
           {/* Base Price */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <s-text color="subdued">Base Price :</s-text>
-            <s-text type="strong">$0:00</s-text>
+            <s-text type="strong">
+              ${(() => {
+                // For edit mode, get price from productData
+                if (formData?.productData?.variants?.[0]) {
+                  return formData.productData.variants[0].price;
+                }
+                // For new service, use live form data
+                return liveFormData.basePrice || "0.00";
+              })()}
+            </s-text>
           </div>
 
           {/* Payment Status */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <s-text color="subdued">Payment :</s-text>
-            <s-badge tone="warning">{getPaymentTypeLabel(formData?.paymentType)}</s-badge>
+            <s-badge tone="warning">
+              {getPaymentTypeLabel(
+                formData?.paymentPreferences?.type || liveFormData.paymentType
+              )}
+            </s-badge>
           </div>
         </div>
       </s-box>
@@ -1766,6 +1835,17 @@ export function ReviewPublishTabContent({ formData, locations = [], staffMembers
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {/* Location Type */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <s-text color="subdued">Location Type :</s-text>
+            <s-text type="strong">
+              {(() => {
+                const locType = formData?.locationType || liveFormData.locationType;
+                return locType ? (locType.charAt(0).toUpperCase() + locType.slice(1)) : "Not set";
+              })()}
+            </s-text>
+          </div>
+
           {/* Locations */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <s-text color="subdued">Locations :</s-text>
@@ -1927,7 +2007,7 @@ function BlockOutDateTime({ formData }) {
               <s-text>Offline</s-text>
             </label>
           </div>
-          
+
           {/* Hidden input for form submission */}
           <input type="hidden" name="locationType" value={locationType} />
         </s-stack>
