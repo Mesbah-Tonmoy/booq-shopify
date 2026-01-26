@@ -50,6 +50,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
               </div>
               <s-text-field
                 name="name"
+                label="Full name"
+                label-accessibility-visibility="hidden"
                 placeholder=""
                 required
                 {...(formData?.name ? { value: formData.name } : {})}
@@ -69,6 +71,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
               <s-text-field
                 name="phone"
                 type="tel"
+                label="Phone number"
+                label-accessibility-visibility="hidden"
                 placeholder=""
                 required
                 {...(formData?.phone ? { value: formData.phone } : {})}
@@ -88,6 +92,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
               <s-text-field
                 name="bio"
                 multiline="3"
+                label="Bio/Notes"
+                label-accessibility-visibility="hidden"
                 placeholder=""
                 {...(formData?.bio ? { value: formData.bio } : {})}
               />
@@ -106,6 +112,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
               <s-text-field
                 name="photoUrl"
                 type="url"
+                label="Photo URL"
+                label-accessibility-visibility="hidden"
                 placeholder=""
                 {...(formData?.photoUrl ? { value: formData.photoUrl } : {})}
               />
@@ -160,6 +168,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
             <s-text-field
               name="email"
               type="email"
+              label="Email address"
+              label-accessibility-visibility="hidden"
               placeholder=""
               {...(formData?.email ? { value: formData.email } : {})}
             />
@@ -212,6 +222,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
               </div>
               <s-select
                 name="timezone"
+                label="Time zone"
+                label-accessibility-visibility="hidden"
                 key={`timezone-${formData?.id || 'new'}`}
                 {...(formData?.timezone ? { value: formData.timezone } : { value: "Asia/Dhaka" })}
               >
@@ -234,6 +246,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
               </div>
               <s-select
                 name="status"
+                label="Status"
+                label-accessibility-visibility="hidden"
                 key={`status-${formData?.id || 'new'}`}
                 {...(formData?.status ? { value: formData.status } : { value: "active" })}
               >
@@ -250,6 +264,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
               <s-text-field
                 name="menuOrderBy"
                 type="number"
+                label="Menu order"
+                label-accessibility-visibility="hidden"
                 placeholder="0"
                 {...(formData?.menuOrderBy ? { value: String(formData.menuOrderBy) } : { value: "0" })}
               />
@@ -273,6 +289,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
         <s-form-field>
           <s-select
             name="locationId"
+            label="Location"
+            label-accessibility-visibility="hidden"
             key={`location-${formData?.id || 'new'}`}
             {...(formData?.locationId ? { value: String(formData.locationId) } : {})}
           >
@@ -296,6 +314,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
         <s-form-field>
           <s-select
             name="staffGroupId"
+            label="Staff group"
+            label-accessibility-visibility="hidden"
             key={`staffGroup-${formData?.id || 'new'}`}
             {...(formData?.staffGroupId ? { value: String(formData.staffGroupId) } : {})}
           >
@@ -353,6 +373,8 @@ export function StaffForm({ formData, locations, staffGroups }) {
             <s-text-field
               name="maxCapacity"
               type="number"
+              label="Maximum concurrent appointments"
+              label-accessibility-visibility="hidden"
               placeholder="1"
               required
               {...(formData?.maxCapacity ? { value: String(formData.maxCapacity) } : { value: "1" })}

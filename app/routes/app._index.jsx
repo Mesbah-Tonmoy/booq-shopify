@@ -1,239 +1,248 @@
-import { useEffect } from "react";
-import { useFetcher } from "react-router";
-import { useAppBridge } from "@shopify/app-bridge-react";
+import { useState } from "react";
+import { useLoaderData, useNavigate } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
 
-  return null;
-};
+  // Find or create shop
+  let shop = await prisma.shop.findUnique({
+    where: { domain: session.shop },
+  });
 
-export const action = async ({ request }) => {
-  const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-          }
-        }
-      }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-        },
+  if (!shop) {
+    shop = await prisma.shop.create({
+      data: {
+        domain: session.shop,
+        accessToken: session.accessToken,
       },
-    },
-  );
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyReactRouterTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    },
-  );
-  const variantResponseJson = await variantResponse.json();
+    });
+  }
+
+  // Fetch dashboard data
+  const services = await prisma.service.findMany({
+    where: { shopId: shop.id },
+  });
+
+  const staffs = await prisma.staff.findMany({
+    where: { shopId: shop.id },
+  });
+
+  const settings = await prisma.settings.findUnique({
+    where: { shopId: shop.id },
+  });
+
+  // Calculate setup progress
+  const setupSteps = {
+    createLocation: false, // For now, locations aren't created in your app
+    addStaffMember: staffs.length > 0,
+    createService: services.length > 0,
+    customizeBookingWidget: !!settings?.widgetSettings,
+    confirmEmailSettings: !!settings?.emailConfig,
+  };
+
+  const completedSteps = Object.values(setupSteps).filter(Boolean).length;
+  const totalSteps = Object.keys(setupSteps).length;
 
   return {
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants,
+    shop,
+    stats: {
+      services: services.length,
+      staff: staffs.length,
+      activeServices: services.filter(s => s.status === 'active').length,
+    },
+    setupProgress: {
+      completed: completedSteps,
+      total: totalSteps,
+      percentage: (completedSteps / totalSteps) * 100,
+      steps: setupSteps,
+    },
   };
 };
 
 export default function Index() {
-  const fetcher = useFetcher();
-  const shopify = useAppBridge();
-  const isLoading =
-    ["loading", "submitting"].includes(fetcher.state) &&
-    fetcher.formMethod === "POST";
+  const { stats, setupProgress } = useLoaderData();
+  const navigate = useNavigate();
+  const [selectedDateRange, setSelectedDateRange] = useState("today");
 
-  useEffect(() => {
-    if (fetcher.data?.product?.id) {
-      shopify.toast.show("Product created");
-    }
-  }, [fetcher.data?.product?.id, shopify]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  const dateRangeOptions = [
+    { label: "Today", value: "today" },
+    { label: "Yesterday", value: "yesterday" },
+    { label: "Last 7 days", value: "last7days" },
+    { label: "Last 30 days", value: "last30days" },
+  ];
 
   return (
-    <s-page heading="Shopify app template">
-      <s-button slot="primary-action" onClick={generateProduct}>
-        Generate a product
-      </s-button>
+    <s-page heading="Booking Widgets">
+      {/* Setup Progress Section */}
+      {setupProgress.percentage < 100 && (
+        <s-card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+            <s-text variant="heading-md" as="h2" fontWeight="semibold">Booq Setup Guide</s-text>
+            <s-text variant="body-sm" color="subdued">
+              {setupProgress.completed} of {setupProgress.total} tasks completed
+            </s-text>
+          </div>
 
-      <s-section heading="Congrats on creating a new Shopify app 🎉">
-        <s-paragraph>
-          This embedded app template uses{" "}
-          <s-link
-            href="https://shopify.dev/docs/apps/tools/app-bridge"
-            target="_blank"
-          >
-            App Bridge
-          </s-link>{" "}
-          interface examples like an{" "}
-          <s-link href="/app/additional">additional page in the app nav</s-link>
-          , as well as an{" "}
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql"
-            target="_blank"
-          >
-            Admin GraphQL
-          </s-link>{" "}
-          mutation demo, to provide a starting point for app development.
-        </s-paragraph>
-      </s-section>
-      <s-section heading="Get started with products">
-        <s-paragraph>
-          Generate a product with GraphQL and get the JSON output for that
-          product. Learn more about the{" "}
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-            target="_blank"
-          >
-            productCreate
-          </s-link>{" "}
-          mutation in our API references.
-        </s-paragraph>
-        <s-stack direction="inline" gap="base">
-          <s-button
-            onClick={generateProduct}
-            {...(isLoading ? { loading: true } : {})}
-          >
-            Generate a product
-          </s-button>
-          {fetcher.data?.product && (
-            <s-button
-              onClick={() => {
-                shopify.intents.invoke?.("edit:shopify/Product", {
-                  value: fetcher.data?.product?.id,
-                });
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <s-text>
+                {setupProgress.steps.createService ? "✓" : "○"} Create a service
+              </s-text>
+              {!setupProgress.steps.createService && (
+                <s-button size="slim" onClick={() => navigate("/app/service/new")}>
+                  Create service
+                </s-button>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <s-text>
+                {setupProgress.steps.addStaffMember ? "✓" : "○"} Add a staff member
+              </s-text>
+              {!setupProgress.steps.addStaffMember && (
+                <s-button size="slim" onClick={() => navigate("/app/staff")}>
+                  Add staff
+                </s-button>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <s-text>
+                {setupProgress.steps.customizeBookingWidget ? "✓" : "○"} Customize booking widget
+              </s-text>
+              {!setupProgress.steps.customizeBookingWidget && (
+                <s-button size="slim" onClick={() => navigate("/app/settings")}>
+                  Customize widget
+                </s-button>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <s-text>
+                {setupProgress.steps.confirmEmailSettings ? "✓" : "○"} Confirm email settings
+              </s-text>
+              {!setupProgress.steps.confirmEmailSettings && (
+                <s-button size="slim" onClick={() => navigate("/app/settings")}>
+                  Setup emails
+                </s-button>
+              )}
+            </div>
+          </div>
+        </s-card>
+      )}
+
+      {/* First Row Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginTop: "1.5rem" }}>
+        <div>
+          <s-text variant="body-sm" color="subdued">Date Range</s-text>
+          <div style={{ marginTop: "0.5rem" }}>
+            <select
+              value={selectedDateRange}
+              onChange={(e) => setSelectedDateRange(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.5rem",
+                fontSize: "0.875rem",
+                border: "1px solid #babfc3",
+                borderRadius: "0.5rem",
+                backgroundColor: "white",
               }}
-              target="_blank"
-              variant="tertiary"
             >
-              Edit product
-            </s-button>
-          )}
-        </s-stack>
-        {fetcher.data?.product && (
-          <s-section heading="productCreate mutation">
-            <s-stack direction="block" gap="base">
-              <s-box
-                padding="base"
-                borderWidth="base"
-                borderRadius="base"
-                background="subdued"
-              >
-                <pre style={{ margin: 0 }}>
-                  <code>{JSON.stringify(fetcher.data.product, null, 2)}</code>
-                </pre>
-              </s-box>
+              {dateRangeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-              <s-heading>productVariantsBulkUpdate mutation</s-heading>
-              <s-box
-                padding="base"
-                borderWidth="base"
-                borderRadius="base"
-                background="subdued"
-              >
-                <pre style={{ margin: 0 }}>
-                  <code>{JSON.stringify(fetcher.data.variant, null, 2)}</code>
-                </pre>
-              </s-box>
-            </s-stack>
-          </s-section>
-        )}
-      </s-section>
+        <div>
+          <s-text variant="body-sm" color="subdued">Goal Value</s-text>
+          <div style={{ marginTop: "0.5rem" }}>
+            <s-text variant="heading-lg" as="p">$0</s-text>
+          </div>
+        </div>
 
-      <s-section slot="aside" heading="App template specs">
-        <s-paragraph>
-          <s-text>Framework: </s-text>
-          <s-link href="https://reactrouter.com/" target="_blank">
-            React Router
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Interface: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/api/app-home/using-polaris-components"
-            target="_blank"
-          >
-            Polaris web components
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>API: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql"
-            target="_blank"
-          >
-            GraphQL
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Database: </s-text>
-          <s-link href="https://www.prisma.io/" target="_blank">
-            Prisma
-          </s-link>
-        </s-paragraph>
-      </s-section>
+        <div>
+          <s-text variant="body-sm" color="subdued">Confirmed Appointments</s-text>
+          <div style={{ marginTop: "0.5rem" }}>
+            <s-text variant="heading-lg" as="p">0</s-text>
+          </div>
+        </div>
 
-      <s-section slot="aside" heading="Next steps">
-        <s-unordered-list>
-          <s-list-item>
-            Build an{" "}
-            <s-link
-              href="https://shopify.dev/docs/apps/getting-started/build-app-example"
-              target="_blank"
-            >
-              example app
-            </s-link>
-          </s-list-item>
-          <s-list-item>
-            Explore Shopify&apos;s API with{" "}
-            <s-link
-              href="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-              target="_blank"
-            >
-              GraphiQL
-            </s-link>
-          </s-list-item>
-        </s-unordered-list>
-      </s-section>
+        <div>
+          <s-text variant="body-sm" color="subdued">Pending Appointments</s-text>
+          <div style={{ marginTop: "0.5rem" }}>
+            <s-text variant="heading-lg" as="p">0</s-text>
+          </div>
+        </div>
+      </div>
+
+      {/* Second Row Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginTop: "1.5rem" }}>
+        <div>
+          <s-text variant="body-sm" color="subdued">Total Appointments</s-text>
+          <div style={{ marginTop: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <s-text variant="heading-md" as="p">0</s-text>
+            <s-text variant="body-sm" color="subdued">0.0%</s-text>
+          </div>
+        </div>
+
+        <div>
+          <s-text variant="body-sm" color="subdued">Pending Appointments</s-text>
+          <div style={{ marginTop: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <s-text variant="heading-md" as="p">0</s-text>
+            <s-text variant="body-sm" color="subdued">0.0%</s-text>
+          </div>
+        </div>
+
+        <div>
+          <s-text variant="body-sm" color="subdued">Total Appointments</s-text>
+          <div style={{ marginTop: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <s-text variant="heading-md" as="p">$0.00</s-text>
+            <s-text variant="body-sm" color="subdued">0.0%</s-text>
+          </div>
+        </div>
+
+        <div>
+          <s-text variant="body-sm" color="subdued">Total Appointments</s-text>
+          <div style={{ marginTop: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <s-text variant="heading-md" as="p">$0.00</s-text>
+            <s-text variant="body-sm" color="subdued">0.0%</s-text>
+          </div>
+        </div>
+      </div>
+
+      {/* Chart Section */}
+      <div style={{ marginTop: "1.5rem" }}>
+        <div style={{ marginBottom: "1rem" }}>
+          <s-text variant="heading-md" as="h3">Date Value</s-text>
+          <div style={{ marginTop: "0.25rem" }}>
+            <s-text variant="heading-lg" as="p">39.17%</s-text>
+            <s-text variant="body-sm" color="subdued">Data Unavailable</s-text>
+          </div>
+        </div>
+
+        <div
+          style={{
+            height: "300px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#fafbfb",
+            borderRadius: "0.5rem",
+            border: "1px solid #e1e3e5",
+          }}
+        >
+          <s-text variant="body-md" color="subdued">
+            Chart will appear here when you have booking data
+          </s-text>
+        </div>
+      </div>
     </s-page>
   );
 }

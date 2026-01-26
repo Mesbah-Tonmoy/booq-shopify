@@ -43,6 +43,8 @@ export function ServiceCategoryForm({ formData }) {
         </div>
         <s-text-field
           name="name"
+          label="Category Name"
+          label-accessibility-visibility="hidden"
           value={name}
           onInput={handleNameChange}
           placeholder=""
@@ -62,6 +64,8 @@ export function ServiceCategoryForm({ formData }) {
         </div>
         <s-text-field
           name="slug"
+          label="Slug"
+          label-accessibility-visibility="hidden"
           value={slug}
           onInput={(e) => setSlug(e.target.value)}
           placeholder=""

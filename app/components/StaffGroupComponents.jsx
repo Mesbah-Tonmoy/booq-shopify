@@ -40,6 +40,8 @@ export function StaffGroupForm({ formData }) {
       <s-form-field label="Group name" required>
         <s-text-field
           name="name"
+          label="Group name"
+          label-accessibility-visibility="hidden"
           value={name}
           onInput={handleNameChange}
           placeholder="e.g., Senior Stylists"
@@ -56,6 +58,8 @@ export function StaffGroupForm({ formData }) {
       <s-form-field label="Slug" required>
         <s-text-field
           name="slug"
+          label="Slug"
+          label-accessibility-visibility="hidden"
           value={slug}
           onInput={(e) => setSlug(e.target.value)}
           placeholder="e.g., senior-stylists"

@@ -228,6 +228,8 @@ export default function StaffPage() {
               {/* Search and Filter */}
               <div style={{ marginBottom: "1rem" }}>
                 <s-text-field
+                  label="Search staff members"
+                  label-accessibility-visibility="hidden"
                   placeholder="Search staff members..."
                   prefix-icon="search"
                 />
