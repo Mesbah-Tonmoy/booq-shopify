@@ -224,7 +224,7 @@ export default function Index() {
           justifyContent="space-between"
           alignItems="center"
         >
-          <s-text>Welcome to Booqly</s-text>
+          <s-heading>Welcome to Booqly</s-heading>
           <s-box>
             <s-select>
               <s-option value="English">English</s-option>
@@ -275,6 +275,73 @@ export default function Index() {
             </s-stack>
           </CollapsibleCard>
         )}
+
+        <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="base">
+          <s-grid-item gridColumn="span 3">
+            <s-section>
+              <s-stack gap="small-400">
+                <s-stack
+                  direction="inline"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <s-heading>Confirmed Appointments</s-heading>
+                  <s-icon type="check" tone="success"></s-icon>
+                </s-stack>
+                <s-text color="subdued">Appointments approved</s-text>
+                <s-heading>214</s-heading>
+              </s-stack>
+            </s-section>
+          </s-grid-item>
+          <s-grid-item gridColumn="span 3">
+            <s-section>
+              <s-stack gap="small-400">
+                <s-stack
+                  direction="inline"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <s-heading>Pending Appointments</s-heading>
+                  <s-icon type="clock" tone="warning"></s-icon>
+                </s-stack>
+                <s-text color="subdued">Appointments approved</s-text>
+                <s-heading>3</s-heading>
+              </s-stack>
+            </s-section>
+          </s-grid-item>
+          <s-grid-item gridColumn="span 3">
+            <s-section>
+              <s-stack gap="small-400">
+                <s-stack
+                  direction="inline"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <s-heading>Total Appointments</s-heading>
+                  <s-icon type="calendar-check" tone="info"></s-icon>
+                </s-stack>
+                <s-text color="subdued">Appointments approved</s-text>
+                <s-heading>217</s-heading>
+              </s-stack>
+            </s-section>
+          </s-grid-item>
+          <s-grid-item gridColumn="span 3">
+            <s-section>
+              <s-stack gap="small-400">
+                <s-stack
+                  direction="inline"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <s-heading>Cancelled Appointments</s-heading>
+                  <s-icon type="alert-circle" tone="critical"></s-icon>
+                </s-stack>
+                <s-text color="subdued">Appointments approved</s-text>
+                <s-heading>0</s-heading>
+              </s-stack>
+            </s-section>
+          </s-grid-item>
+        </s-grid>
 
         <s-section>
           <div className="mb-6">
