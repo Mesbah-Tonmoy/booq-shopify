@@ -1,15 +1,24 @@
-import { useEffect, useState } from "react";
-import { Form, useActionData, useFetcher, useLoaderData, useNavigation } from "react-router";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
-import prisma from "../db.server";
-import { ServiceCategoryForm, ServiceCategoryListItem } from "../components/ServiceCategoryComponents";
+import { useEffect, useState } from 'react';
+import {
+  Form,
+  useActionData,
+  useFetcher,
+  useLoaderData,
+  useNavigation,
+} from 'react-router';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { boundary } from '@shopify/shopify-app-react-router/server';
+import { authenticate } from '../shopify.server';
+import prisma from '../db.server';
+import {
+  ServiceCategoryForm,
+  ServiceCategoryListItem,
+} from '../components/ServiceCategoryComponents';
 
 // Loader - Fetch all service categories
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
-  
+
   // Find or create shop
   let shop = await prisma.shop.findUnique({
     where: { domain: session.shop },
@@ -27,7 +36,7 @@ export const loader = async ({ request }) => {
   // Fetch all service categories for this shop
   const serviceCategories = await prisma.serviceCategory.findMany({
     where: { shopId: shop.id },
-    orderBy: { id: "desc" },
+    orderBy: { id: 'desc' },
   });
 
   return { serviceCategories, shopId: shop.id };
@@ -37,7 +46,7 @@ export const loader = async ({ request }) => {
 export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const formData = await request.formData();
-  const actionType = formData.get("_action");
+  const actionType = formData.get('_action');
 
   // Get shop
   const shop = await prisma.shop.findUnique({
@@ -45,29 +54,29 @@ export const action = async ({ request }) => {
   });
 
   if (!shop) {
-    return { error: "Shop not found" };
+    return { error: 'Shop not found' };
   }
 
   // DELETE
-  if (actionType === "delete") {
-    const serviceCategoryId = parseInt(formData.get("serviceCategoryId"));
+  if (actionType === 'delete') {
+    const serviceCategoryId = parseInt(formData.get('serviceCategoryId'));
     await prisma.serviceCategory.delete({
       where: { id: serviceCategoryId },
     });
-    return { success: true, message: "Service category deleted successfully" };
+    return { success: true, message: 'Service category deleted successfully' };
   }
 
   // CREATE or UPDATE
-  const serviceCategoryId = formData.get("serviceCategoryId");
-  const name = formData.get("name");
-  const slug = formData.get("slug");
+  const serviceCategoryId = formData.get('serviceCategoryId');
+  const name = formData.get('name');
+  const slug = formData.get('slug');
 
   // Validate required fields
-  if (!name || name.trim() === "") {
-    return { error: "Category name is required" };
+  if (!name || name.trim() === '') {
+    return { error: 'Category name is required' };
   }
-  if (!slug || slug.trim() === "") {
-    return { error: "Slug is required" };
+  if (!slug || slug.trim() === '') {
+    return { error: 'Slug is required' };
   }
 
   const serviceCategoryData = {
@@ -76,19 +85,23 @@ export const action = async ({ request }) => {
     shopId: shop.id,
   };
 
-  if (serviceCategoryId && serviceCategoryId !== "new") {
+  if (serviceCategoryId && serviceCategoryId !== 'new') {
     // UPDATE
     await prisma.serviceCategory.update({
       where: { id: parseInt(serviceCategoryId) },
       data: serviceCategoryData,
     });
-    return { success: true, message: "Service category updated successfully" };
+    return { success: true, message: 'Service category updated successfully' };
   } else {
     // CREATE
     await prisma.serviceCategory.create({
       data: serviceCategoryData,
     });
-    return { success: true, message: "Service category created successfully", clear: true };
+    return {
+      success: true,
+      message: 'Service category created successfully',
+      clear: true,
+    };
   }
 };
 
@@ -102,13 +115,13 @@ export default function ServiceCategoryPage() {
   const [editingServiceCategory, setEditingServiceCategory] = useState(null);
   const [formKey, setFormKey] = useState(0);
 
-  const isSubmitting = navigation.state === "submitting";
+  const isSubmitting = navigation.state === 'submitting';
 
   // Show toast notification on success
   useEffect(() => {
     if (actionData?.success) {
       shopify.toast.show(actionData.message);
-      
+
       // Clear form after successful creation
       if (actionData.clear) {
         setEditingServiceCategory(null);
@@ -133,9 +146,9 @@ export default function ServiceCategoryPage() {
 
   const handleDelete = (serviceCategoryId) => {
     const formData = new FormData();
-    formData.append("_action", "delete");
-    formData.append("serviceCategoryId", serviceCategoryId);
-    fetcher.submit(formData, { method: "post" });
+    formData.append('_action', 'delete');
+    formData.append('serviceCategoryId', serviceCategoryId);
+    fetcher.submit(formData, { method: 'post' });
   };
 
   const handleCancel = () => {
@@ -144,7 +157,7 @@ export default function ServiceCategoryPage() {
   };
 
   const handleSubmit = () => {
-    const form = document.getElementById("service-category-form");
+    const form = document.getElementById('service-category-form');
     if (form) {
       if (form.checkValidity()) {
         form.requestSubmit();
@@ -155,7 +168,15 @@ export default function ServiceCategoryPage() {
   };
 
   return (
-    <s-page heading={editingServiceCategory ? "Edit Service Category" : "Add Service Category"} badge={editingServiceCategory ? "Edit" : "New"}>
+    <s-page
+      heading={
+        editingServiceCategory
+          ? 'Edit Service Category'
+          : 'Add Service Category'
+      }
+      badge={editingServiceCategory ? 'Edit' : 'New'}
+    >
+      <br />
       {editingServiceCategory && (
         <s-button slot="secondary-actions" onClick={handleCancel}>
           Cancel
@@ -167,85 +188,75 @@ export default function ServiceCategoryPage() {
         onClick={handleSubmit}
         {...(isSubmitting ? { loading: true } : {})}
       >
-        {editingServiceCategory ? "Update Service Category" : "Save Service Category"}
+        {editingServiceCategory
+          ? 'Update Service Category'
+          : 'Save Service Category'}
       </s-button>
 
       <Form method="post" id="service-category-form" key={formKey}>
         <input
           type="hidden"
           name="serviceCategoryId"
-          value={editingServiceCategory?.id || "new"}
+          value={editingServiceCategory?.id || 'new'}
         />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-          {/* Left Column - Form */}
-          <div>
+        <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="base">
+          <s-grid-item gridColumn="span 5">
+            {/* Left Column - Form */}
             <s-section>
               <s-heading>Add Service Category</s-heading>
               <ServiceCategoryForm formData={editingServiceCategory} />
             </s-section>
-          </div>
+          </s-grid-item>
 
           {/* Right Column - Service Category List */}
-          <div>
-            <s-section heading={`Service Categories (${serviceCategories.length})`}>
-              <s-paragraph>Organize your services into categories for better management</s-paragraph>
+          <s-grid-item gridColumn="span 7">
+            <s-section
+              heading={`Service Categories (${serviceCategories.length})`}
+            >
+              <s-paragraph>
+                Organize your services into categories for better management
+              </s-paragraph>
 
-              {/* List Header */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 2fr 1fr 40px",
-                  gap: "0.5rem",
-                  padding: "0.75rem 0.5rem",
-                  borderBottom: "1px solid #e1e3e5",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Category name</s-text>
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Slug</s-text>
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Services</s-text>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">More</s-text>
-                </div>
-              </div>
+              <s-section padding="none">
+                <s-table>
+                  <s-table-header-row>
+                    <s-table-header>Category name</s-table-header>
+                    <s-table-header>Slug</s-table-header>
+                    <s-table-header>Services</s-table-header>
+                    <s-table-header style={{ textAlign: 'right' }}>
+                      More
+                    </s-table-header>
+                  </s-table-header-row>
 
-              {/* Service Category List */}
-              <div>
-                {serviceCategories.length === 0 ? (
-                  <div style={{ padding: "2rem", textAlign: "center" }}>
-                    <s-text color="subdued">
-                      No service categories yet. Create your first service category to get started.
-                    </s-text>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                    {serviceCategories.map((serviceCategory, index) => (
-                      <div
-                        key={serviceCategory.id}
-                        style={{
-                          borderBottom: index < serviceCategories.length - 1 ? "1px solid #e1e3e5" : "none",
-                        }}
-                      >
+                  <s-table-body>
+                    {serviceCategories.length === 0 ? (
+                      <s-table-row>
+                        <s-table-cell colSpan="4">
+                          <div style={{ padding: '2rem', textAlign: 'center' }}>
+                            <s-text color="subdued">
+                              No service categories yet. Create your first
+                              service category to get started.
+                            </s-text>
+                          </div>
+                        </s-table-cell>
+                      </s-table-row>
+                    ) : (
+                      serviceCategories.map((serviceCategory) => (
                         <ServiceCategoryListItem
+                          key={serviceCategory.id}
                           serviceCategory={serviceCategory}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
                         />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      ))
+                    )}
+                  </s-table-body>
+                </s-table>
+              </s-section>
             </s-section>
-          </div>
-        </div>
+          </s-grid-item>
+        </s-grid>
       </Form>
     </s-page>
   );
