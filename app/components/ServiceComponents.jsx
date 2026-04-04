@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAppBridge } from '@shopify/app-bridge-react';
 
-// Product Selection Component
-export function ProductSelectionSection({ formData, serviceCategories = [] }) {
+export function ProductSelectionSection({
+  formData,
+  serviceCategories = [],
+  errors = {},
+  clearError = () => {},
+}) {
   const [isOpen, setIsOpen] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(
     formData?.category || ''
@@ -39,6 +43,7 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
       setSelectedProduct(product);
       // Select all variants by default
       setSelectedVariants(product.variants || []);
+      clearError('shopifyProductId');
     }
   };
 
@@ -87,10 +92,10 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
           {/* Service Name */}
           <s-text-field
             name="name"
-            label="Service name"
-            details="Enter a clear service name (e.g online Class, Car Rental)"
+            error={errors?.name}
             defaultValue={formData?.name || ''}
             required
+            onChange={() => clearError('name')}
           />
 
           {/* Category */}
@@ -98,7 +103,10 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
             label="Category"
             details="Choose a category for this service"
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value);
+              clearError('category');
+            }}
           >
             <s-option value="">Select a category</s-option>
             {serviceCategories.map((category) => (
@@ -137,6 +145,12 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
                   {hasProduct ? 'Change Product' : 'Select Product'}
                 </s-button>
               </s-stack>
+
+              {errors?.shopifyProductId && (
+                <s-banner tone="critical">
+                  <s-text color="critical">{errors.shopifyProductId}</s-text>
+                </s-banner>
+              )}
 
               {!hasProduct && !formData?.shopifyProductId && (
                 <s-text color="subdued">
@@ -351,8 +365,12 @@ export function ProductSelectionSection({ formData, serviceCategories = [] }) {
   );
 }
 
-// Slot Configuration Section Wrapper
-export function SlotConfigurationSection({ formData, currentServiceType }) {
+export function SlotConfigurationSection({
+  formData,
+  currentServiceType,
+  errors = {},
+  clearError = () => {},
+}) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -385,23 +403,40 @@ export function SlotConfigurationSection({ formData, currentServiceType }) {
       <div style={{ display: isOpen ? 'block' : 'none' }}>
         <s-stack direction="block" gap="base">
           {/* Service Type */}
-          <ServiceTypeSelector formData={formData} />
+          <ServiceTypeSelector
+            formData={formData}
+            errors={errors}
+            clearError={clearError}
+          />
 
           {/* Bundle Booking Section */}
           <BundleBookingSection
             formData={formData}
             currentServiceType={currentServiceType}
+            errors={errors}
           />
 
           {/* Render appropriate slot configuration based on service type */}
           {currentServiceType === 'regular' && (
-            <RegularSlotConfiguration formData={formData} />
+            <RegularSlotConfiguration
+              formData={formData}
+              errors={errors}
+              clearError={clearError}
+            />
           )}
           {currentServiceType === 'full-day' && (
-            <FullDaySlotConfiguration formData={formData} />
+            <FullDaySlotConfiguration
+              formData={formData}
+              errors={errors}
+              clearError={clearError}
+            />
           )}
           {currentServiceType === 'multi-day' && (
-            <MultiDaySlotConfiguration formData={formData} />
+            <MultiDaySlotConfiguration
+              formData={formData}
+              errors={errors}
+              clearError={clearError}
+            />
           )}
         </s-stack>
       </div>
@@ -410,7 +445,11 @@ export function SlotConfigurationSection({ formData, currentServiceType }) {
 }
 
 // Slot Configuration for Regular Booking
-export function RegularSlotConfiguration({ formData }) {
+export function RegularSlotConfiguration({
+  formData,
+  errors = {},
+  clearError = () => {},
+}) {
   // Initialize with saved slots or default
   const defaultSlots = formData?.slotConfiguration?.slots || [
     { start: '09:00', end: '17:00' },
@@ -431,6 +470,7 @@ export function RegularSlotConfiguration({ formData }) {
     const newSlots = [...slots];
     newSlots[index][field] = value;
     setSlots(newSlots);
+    clearError('slotConfiguration');
   };
 
   return (
@@ -504,6 +544,12 @@ export function RegularSlotConfiguration({ formData }) {
         </div>
       </div>
 
+      {errors?.slotConfiguration && (
+        <div style={{ marginTop: '0.5rem' }}>
+          <s-text color="critical">{errors.slotConfiguration}</s-text>
+        </div>
+      )}
+
       <input
         type="hidden"
         name="slotConfiguration"
@@ -514,7 +560,11 @@ export function RegularSlotConfiguration({ formData }) {
 }
 
 // Slot Configuration for Full-Day Booking
-export function FullDaySlotConfiguration({ formData }) {
+export function FullDaySlotConfiguration({
+  formData,
+  errors = {},
+  clearError = () => {},
+}) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const dayKeys = [
     'monday',
@@ -561,6 +611,7 @@ export function FullDaySlotConfiguration({ formData }) {
       ...slots,
       [day]: newSlots,
     });
+    clearError('slotConfiguration');
   };
 
   return (
@@ -700,6 +751,12 @@ export function FullDaySlotConfiguration({ formData }) {
         </div>
       </div>
 
+      {errors?.slotConfiguration && (
+        <div style={{ marginTop: '0.5rem' }}>
+          <s-text color="critical">{errors.slotConfiguration}</s-text>
+        </div>
+      )}
+
       <input
         type="hidden"
         name="slotConfiguration"
@@ -710,7 +767,11 @@ export function FullDaySlotConfiguration({ formData }) {
 }
 
 // Slot Configuration for Multi-Day Booking
-export function MultiDaySlotConfiguration({ formData }) {
+export function MultiDaySlotConfiguration({
+  formData,
+  errors = {},
+  clearError = () => {},
+}) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const dayKeys = [
     'monday',
@@ -738,6 +799,7 @@ export function MultiDaySlotConfiguration({ formData }) {
     } else {
       setAllowedDays([...allowedDays, day]);
     }
+    clearError('slotConfiguration');
   };
 
   return (
@@ -855,7 +917,11 @@ export function MultiDaySlotConfiguration({ formData }) {
 }
 
 // Service Type Selection
-export function ServiceTypeSelector({ formData }) {
+export function ServiceTypeSelector({
+  formData,
+  errors = {},
+  clearError = () => {},
+}) {
   const [serviceType, setServiceType] = useState(
     formData?.serviceType || 'regular'
   );
@@ -864,13 +930,19 @@ export function ServiceTypeSelector({ formData }) {
     <s-form-field>
       <s-choice-list
         label="Service Type"
-        name="serviceType"
+        name="serviceTypeRadio"
         onChange={(e) => setServiceType(e.target.value)}
       >
         <s-choice value="regular">Regular</s-choice>
         <s-choice value="full-day">Full Day</s-choice>
         <s-choice value="half-day">Half Day</s-choice>
       </s-choice-list>
+
+      {errors?.serviceType && (
+        <div style={{ marginTop: '0.5rem' }}>
+          <s-text color="critical">{errors.serviceType}</s-text>
+        </div>
+      )}
 
       <input type="hidden" name="serviceType" value={serviceType} />
     </s-form-field>
@@ -1034,35 +1106,58 @@ export function ServiceListItem({ service, onEdit, onDelete }) {
 }
 
 // Others Tab Component (formerly Availability)
-export function OthersTabContent({ formData }) {
+export function OthersTabContent({
+  formData,
+  errors = {},
+  clearError = () => {},
+}) {
   return (
     <s-stack direction="block" gap="large">
-      {/* Minimum Advanced Noticed */}
-      <MinimumAdvancedNoticed formData={formData} />
-
-      {/* Service Visibility */}
-      <ServiceVisibility formData={formData} />
-
-      {/* Notification Email */}
-      <NotificationEmail formData={formData} />
-
-      {/* Cancel Bookings */}
-      <CancelBookings formData={formData} />
-
-      {/* Reschedule Bookings */}
-      <RescheduleBookings formData={formData} />
-
-      {/* Payment Preferences */}
-      <PaymentPreferences formData={formData} />
-
-      {/* Customer Information */}
-      <CustomerInformation formData={formData} />
+      <MinimumAdvancedNoticed
+        formData={formData}
+        errors={errors}
+        clearError={clearError}
+      />
+      <ServiceVisibility
+        formData={formData}
+        errors={errors}
+        clearError={clearError}
+      />
+      <NotificationEmail
+        formData={formData}
+        errors={errors}
+        clearError={clearError}
+      />
+      <CancelBookings
+        formData={formData}
+        errors={errors}
+        clearError={clearError}
+      />
+      <RescheduleBookings
+        formData={formData}
+        errors={errors}
+        clearError={clearError}
+      />
+      <PaymentPreferences
+        formData={formData}
+        errors={errors}
+        clearError={clearError}
+      />
+      <CustomerInformation
+        formData={formData}
+        errors={errors}
+        clearError={clearError}
+      />
     </s-stack>
   );
 }
 
 // Minimum Advanced Noticed Component
-function MinimumAdvancedNoticed({ formData }) {
+function MinimumAdvancedNoticed({
+  formData,
+  errors = {},
+  clearError = () => {},
+}) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -1114,7 +1209,7 @@ function MinimumAdvancedNoticed({ formData }) {
 }
 
 // Service Visibility Component
-function ServiceVisibility({ formData }) {
+function ServiceVisibility({ formData, errors = {}, clearError = () => {} }) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -1176,7 +1271,11 @@ function ServiceVisibility({ formData }) {
 }
 
 // Capacity Setup Component
-export function CapacitySetup({ formData }) {
+export function CapacitySetup({
+  formData,
+  errors = {},
+  clearError = () => {},
+}) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -1218,7 +1317,7 @@ export function CapacitySetup({ formData }) {
 }
 
 // Notification Email Component
-function NotificationEmail({ formData }) {
+function NotificationEmail({ formData, errors = {}, clearError = () => {} }) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -1257,7 +1356,7 @@ function NotificationEmail({ formData }) {
 }
 
 // Cancel Bookings Component
-function CancelBookings({ formData }) {
+function CancelBookings({ formData, errors = {}, clearError = () => {} }) {
   const [isOpen, setIsOpen] = useState(true);
   const cancelBooking = formData?.cancelBooking || {};
   const [allowCancel, setAllowCancel] = useState(
@@ -1349,7 +1448,7 @@ function CancelBookings({ formData }) {
 }
 
 // Reschedule Bookings Component
-function RescheduleBookings({ formData }) {
+function RescheduleBookings({ formData, errors = {}, clearError = () => {} }) {
   const [isOpen, setIsOpen] = useState(true);
   const [allowReschedule, setAllowReschedule] = useState(
     formData?.allowReschedule || false
@@ -1396,7 +1495,7 @@ function RescheduleBookings({ formData }) {
 }
 
 // Payment Preferences Component
-function PaymentPreferences({ formData }) {
+function PaymentPreferences({ formData, errors = {}, clearError = () => {} }) {
   const [isOpen, setIsOpen] = useState(true);
   const paymentPrefs = formData?.paymentPreferences || {};
   const [paymentType, setPaymentType] = useState(
@@ -1419,6 +1518,36 @@ function PaymentPreferences({ formData }) {
     paymentPrefs?.bookNowPayLater?.description ||
       'You can complete the booking without payment. The payment will be collected later.'
   );
+
+  const handlePaymentTypeChange = (type) => {
+    setPaymentType(type);
+    clearError('paymentPreferences');
+  };
+
+  const handleFullPaymentNameChange = (val) => {
+    setFullPaymentName(val);
+    clearError('paymentPreferences');
+  };
+
+  const handleFullPaymentLabelChange = (val) => {
+    setFullPaymentLabel(val);
+    clearError('paymentPreferences');
+  };
+
+  const handleFullPaymentDescriptionChange = (val) => {
+    setFullPaymentDescription(val);
+    clearError('paymentPreferences');
+  };
+
+  const handleBNPLNameChange = (val) => {
+    setBookNowPayLaterName(val);
+    clearError('paymentPreferences');
+  };
+
+  const handleBNPLDescriptionChange = (val) => {
+    setBookNowPayLaterDescription(val);
+    clearError('paymentPreferences');
+  };
 
   return (
     <s-section>
@@ -1473,7 +1602,7 @@ function PaymentPreferences({ formData }) {
                   name="paymentType"
                   value="fullPayment"
                   checked={paymentType === 'fullPayment'}
-                  onChange={() => setPaymentType('fullPayment')}
+                  onChange={() => handlePaymentTypeChange('fullPayment')}
                   style={{ marginTop: '0.25rem' }}
                 />
                 <div style={{ flex: 1 }}>
@@ -1507,7 +1636,9 @@ function PaymentPreferences({ formData }) {
                       </s-text>
                       <s-text-field
                         value={fullPaymentName}
-                        onChange={(e) => setFullPaymentName(e.target.value)}
+                        onChange={(e) =>
+                          handleFullPaymentNameChange(e.target.value)
+                        }
                       />
                       <s-text
                         color="subdued"
@@ -1529,7 +1660,9 @@ function PaymentPreferences({ formData }) {
                       </s-text>
                       <s-text-field
                         value={fullPaymentLabel}
-                        onChange={(e) => setFullPaymentLabel(e.target.value)}
+                        onChange={(e) =>
+                          handleFullPaymentLabelChange(e.target.value)
+                        }
                       />
                     </div>
 
@@ -1544,7 +1677,7 @@ function PaymentPreferences({ formData }) {
                       <s-text-field
                         value={fullPaymentDescription}
                         onChange={(e) =>
-                          setFullPaymentDescription(e.target.value)
+                          handleFullPaymentDescriptionChange(e.target.value)
                         }
                       />
                     </div>
@@ -1579,7 +1712,7 @@ function PaymentPreferences({ formData }) {
                   name="paymentType"
                   value="bookNowPayLater"
                   checked={paymentType === 'bookNowPayLater'}
-                  onChange={() => setPaymentType('bookNowPayLater')}
+                  onChange={() => handlePaymentTypeChange('bookNowPayLater')}
                   style={{ marginTop: '0.25rem' }}
                 />
                 <div style={{ flex: 1 }}>
@@ -1613,7 +1746,7 @@ function PaymentPreferences({ formData }) {
                       </s-text>
                       <s-text-field
                         value={bookNowPayLaterName}
-                        onChange={(e) => setBookNowPayLaterName(e.target.value)}
+                        onChange={(e) => handleBNPLNameChange(e.target.value)}
                       />
                       <s-text
                         color="subdued"
@@ -1636,7 +1769,7 @@ function PaymentPreferences({ formData }) {
                       <s-text-field
                         value={bookNowPayLaterDescription}
                         onChange={(e) =>
-                          setBookNowPayLaterDescription(e.target.value)
+                          handleBNPLDescriptionChange(e.target.value)
                         }
                       />
                     </div>
@@ -1670,7 +1803,7 @@ function PaymentPreferences({ formData }) {
 }
 
 // Customer Information Component
-function CustomerInformation({ formData }) {
+function CustomerInformation({ formData, errors = {}, clearError = () => {} }) {
   const [isOpen, setIsOpen] = useState(true);
   const [fields, setFields] = useState(
     formData?.customerFields || [
@@ -1999,6 +2132,8 @@ export function ReviewPublishTabContent({
   locations = [],
   staffMembers = [],
   onTabChange,
+  errors = {},
+  clearError = () => {},
 }) {
   const [liveFormData, setLiveFormData] = useState({
     name: '',
@@ -2507,23 +2642,34 @@ export function LocationStaffTabContent({
   formData,
   locations = [],
   staffMembers = [],
+  errors = {},
+  clearError = () => {},
 }) {
   return (
     <s-stack direction="block" gap="large">
-      {/* Block Out Date & Time */}
-      <BlockOutDateTime formData={formData} />
-
-      {/* Locations */}
-      <LocationsSection formData={formData} locations={locations} />
-
-      {/* Staff Members */}
-      <StaffMembersSection formData={formData} staffMembers={staffMembers} />
+      <BlockOutDateTime
+        formData={formData}
+        errors={errors}
+        clearError={clearError}
+      />
+      <LocationsSection
+        formData={formData}
+        locations={locations}
+        errors={errors}
+        clearError={clearError}
+      />
+      <StaffMembersSection
+        formData={formData}
+        staffMembers={staffMembers}
+        errors={errors}
+        clearError={clearError}
+      />
     </s-stack>
   );
 }
 
 // Block Out Date & Time Component
-function BlockOutDateTime({ formData }) {
+function BlockOutDateTime({ formData, errors = {}, clearError = () => {} }) {
   const [isOpen, setIsOpen] = useState(true);
   const [locationType, setLocationType] = useState(
     formData?.locationType || ''
@@ -2531,6 +2677,7 @@ function BlockOutDateTime({ formData }) {
 
   const handleLocationTypeChange = (type) => {
     setLocationType(type);
+    clearError('locationType');
   };
 
   return (
@@ -2553,44 +2700,20 @@ function BlockOutDateTime({ formData }) {
           <s-text color="subdued">
             Select where your service will be provided
           </s-text>
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+          <s-choice-list
+            label="Location Type"
+            name="locationTypeRadio"
+            onChange={(e) => setLocationType(e.target.value)}
           >
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="radio"
-                name="locationTypeRadio"
-                value="online"
-                checked={locationType === 'online'}
-                onChange={() => handleLocationTypeChange('online')}
-              />
-              <s-text>Online</s-text>
-            </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="radio"
-                name="locationTypeRadio"
-                value="offline"
-                checked={locationType === 'offline'}
-                onChange={() => handleLocationTypeChange('offline')}
-              />
-              <s-text>Offline</s-text>
-            </label>
-          </div>
+            <s-choice value="online">Online</s-choice>
+            <s-choice value="offline">Offline</s-choice>
+          </s-choice-list>
+
+          {errors?.locationType && (
+            <div style={{ marginTop: '0.5rem' }}>
+              <s-text color="critical">{errors.locationType}</s-text>
+            </div>
+          )}
 
           {/* Hidden input for form submission */}
           <input type="hidden" name="locationType" value={locationType} />
@@ -2601,7 +2724,12 @@ function BlockOutDateTime({ formData }) {
 }
 
 // Locations Section Component
-function LocationsSection({ formData, locations }) {
+function LocationsSection({
+  formData,
+  locations,
+  errors = {},
+  clearError = () => {},
+}) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
   const [selectedLocations, setSelectedLocations] = useState(
@@ -2930,7 +3058,12 @@ function LocationsSection({ formData, locations }) {
 }
 
 // Staff Members Section Component
-function StaffMembersSection({ formData, staffMembers }) {
+function StaffMembersSection({
+  formData,
+  staffMembers,
+  errors = {},
+  clearError = () => {},
+}) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
   const [selectedStaff, setSelectedStaff] = useState(

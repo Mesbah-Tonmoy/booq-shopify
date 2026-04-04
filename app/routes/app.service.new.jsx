@@ -176,7 +176,7 @@ export default function NewServicePage() {
   const [selectedTab, setSelectedTab] = useState(0);
   const [formKey] = useState(0);
   const [currentServiceType, setCurrentServiceType] = useState('regular');
-  const [validationErrors, setValidationErrors] = useState([]);
+  const [validationErrors, setValidationErrors] = useState({});
 
   const isSubmitting = navigation.state === 'submitting';
 
@@ -202,47 +202,64 @@ export default function NewServicePage() {
     }
   };
 
-  // Listen to service type changes
-  const handleServiceTypeChange = (e) => {
-    if (e.target.name === 'serviceTypeRadio') {
+  // Clear specific error
+  const clearError = (fieldName) => {
+    if (validationErrors[fieldName]) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
+  // Listen to service type changes and clear errors
+  const handleFormChange = (e) => {
+    const { name } = e.target;
+    if (name) clearError(name);
+
+    if (name === 'serviceTypeRadio') {
       const value = e.target.value;
       setCurrentServiceType(value);
+      clearError('serviceType');
     }
   };
 
   // Validate current step
   const validateStep = (step) => {
     const form = document.getElementById('service-form');
-    const errors = [];
+    const errors = {};
 
     if (step === 0) {
       // Step 1: Product/Slot configuration
       const serviceName = form.querySelector('[name="name"]')?.value;
       if (!serviceName || serviceName.trim() === '') {
-        errors.push('Service name is required');
+        errors.name = 'Service name is required';
       }
 
       const productId = form.querySelector('[name="shopifyProductId"]')?.value;
       if (!productId) {
-        errors.push('Product link is required');
+        errors.shopifyProductId = 'Product link is required';
       }
 
-      const serviceType = form.querySelector('[name="serviceType"]')?.value;
+      const serviceType = form.querySelector(
+        'input[name="serviceType"]'
+      )?.value;
       if (!serviceType) {
-        errors.push('Service type is required');
+        errors.serviceType = 'Service type is required';
       }
 
       const slotConfiguration = form.querySelector(
         '[name="slotConfiguration"]'
       )?.value;
       if (!slotConfiguration || slotConfiguration === '{}') {
-        errors.push('Slot configuration is required');
+        errors.slotConfiguration = 'Slot configuration is required';
       }
     } else if (step === 1) {
       // Step 2: Location & Staff
       const locationType = form.querySelector('[name="locationType"]')?.value;
       if (!locationType) {
-        errors.push('Location type is required');
+        errors.locationType = 'Location type is required';
       }
     } else if (step === 2) {
       // Step 3: Others
@@ -250,7 +267,7 @@ export default function NewServicePage() {
         '[name="paymentPreferences"]'
       )?.value;
       if (!paymentPreferences) {
-        errors.push('Payment preference is required');
+        errors.paymentPreferences = 'Payment preference is required';
       }
     }
 
@@ -260,18 +277,18 @@ export default function NewServicePage() {
   // Handle next button
   const handleNext = () => {
     const errors = validateStep(selectedTab);
-    if (errors.length > 0) {
+    if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      shopify.toast.show(errors.join(', '), { isError: true });
+      shopify.toast.show(Object.values(errors).join(', '), { isError: true });
       return;
     }
-    setValidationErrors([]);
+    setValidationErrors({});
     setSelectedTab(selectedTab + 1);
   };
 
   // Handle previous button
   const handlePrevious = () => {
-    setValidationErrors([]);
+    setValidationErrors({});
     setSelectedTab(selectedTab - 1);
   };
 
@@ -279,7 +296,7 @@ export default function NewServicePage() {
   const handleStepClick = (targetStep) => {
     // If going backwards, allow without validation
     if (targetStep < selectedTab) {
-      setValidationErrors([]);
+      setValidationErrors({});
       setSelectedTab(targetStep);
       return;
     }
@@ -287,10 +304,12 @@ export default function NewServicePage() {
     // If going forward, validate all steps in between
     for (let step = selectedTab; step < targetStep; step++) {
       const errors = validateStep(step);
-      if (errors.length > 0) {
+      if (Object.keys(errors).length > 0) {
         setValidationErrors(errors);
         shopify.toast.show(
-          `Please complete Step ${step + 1}: ${errors.join(', ')}`,
+          `Please complete Step ${step + 1}: ${Object.values(errors).join(
+            ', '
+          )}`,
           { isError: true }
         );
         return;
@@ -298,7 +317,7 @@ export default function NewServicePage() {
     }
 
     // All validations passed
-    setValidationErrors([]);
+    setValidationErrors({});
     setSelectedTab(targetStep);
   };
 
@@ -344,104 +363,112 @@ export default function NewServicePage() {
               method="post"
               id="service-form"
               key={formKey}
-              onChange={handleServiceTypeChange}
+              onChange={handleFormChange}
             >
               <input type="hidden" name="serviceId" value="new" />
 
-              {/* Tab 0: Product/Slot Configuration */}
-              <div
-                style={{
-                  display: selectedTab === 0 ? 'block' : 'none',
-                }}
-              >
-                <s-stack direction="block" gap="large">
-                  {/* Product Selection Section */}
-                  <ProductSelectionSection
-                    formData={null}
-                    serviceCategories={loaderData?.serviceCategories || []}
-                  />
+              <s-stack gap="base">
+                {/* Tab 0: Product/Slot Configuration */}
+                <div
+                  style={{
+                    display: selectedTab === 0 ? 'block' : 'none',
+                  }}
+                >
+                  <s-stack direction="block" gap="large">
+                    {/* Product Selection Section */}
+                    <ProductSelectionSection
+                      formData={null}
+                      serviceCategories={loaderData?.serviceCategories || []}
+                      errors={validationErrors}
+                      clearError={clearError}
+                    />
 
-                  {/* Slot Configuration Section */}
-                  <SlotConfigurationSection
-                    formData={null}
-                    currentServiceType={currentServiceType}
-                  />
+                    {/* Slot Configuration Section */}
+                    <SlotConfigurationSection
+                      formData={null}
+                      currentServiceType={currentServiceType}
+                      errors={validationErrors}
+                      clearError={clearError}
+                    />
 
-                  {/* Capacity Setup */}
-                  <CapacitySetup formData={null} />
-                </s-stack>
-              </div>
-
-              {/* Tab 1: Location & Staff Member */}
-              <div
-                style={{
-                  display: selectedTab === 1 ? 'block' : 'none',
-                }}
-              >
-                <LocationStaffTabContent
-                  formData={null}
-                  locations={loaderData?.locations || []}
-                  staffMembers={loaderData?.staffMembers || []}
-                />
-              </div>
-
-              {/* Tab 2: Others */}
-              <div
-                style={{
-                  display: selectedTab === 2 ? 'block' : 'none',
-                }}
-              >
-                <OthersTabContent formData={null} />
-              </div>
-
-              {/* Tab 3: Review & Publish */}
-              <div
-                style={{
-                  display: selectedTab === 3 ? 'block' : 'none',
-                }}
-              >
-                <ReviewPublishTabContent
-                  formData={null}
-                  locations={loaderData?.locations || []}
-                  staffMembers={loaderData?.staffMembers || []}
-                  onTabChange={setSelectedTab}
-                />
-              </div>
-
-              {/* Navigation Buttons */}
-              <div
-                style={{
-                  borderTop: '1px solid #e1e3e5',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  {selectedTab > 0 && (
-                    <s-button onClick={handlePrevious}>
-                      <s-icon type="arrow-left"></s-icon>
-                      Previous
-                    </s-button>
-                  )}
+                    {/* Capacity Setup */}
+                    <CapacitySetup
+                      formData={null}
+                      errors={validationErrors}
+                      clearError={clearError}
+                    />
+                  </s-stack>
                 </div>
-                <div>
-                  {selectedTab < 3 ? (
-                    <s-button variant="primary" onClick={handleNext}>
-                      Next
-                      <s-icon type="arrow-right"></s-icon>
-                    </s-button>
-                  ) : (
-                    <s-button
-                      variant="primary"
-                      onClick={handleSubmit}
-                      {...(isSubmitting ? { loading: true } : {})}
-                    >
-                      Save Service
-                    </s-button>
-                  )}
+
+                {/* Tab 1: Location & Staff Member */}
+                <div
+                  style={{
+                    display: selectedTab === 1 ? 'block' : 'none',
+                  }}
+                >
+                  <LocationStaffTabContent
+                    formData={null}
+                    locations={loaderData?.locations || []}
+                    staffMembers={loaderData?.staffMembers || []}
+                    errors={validationErrors}
+                    clearError={clearError}
+                  />
                 </div>
-              </div>
+
+                {/* Tab 2: Others */}
+                <div
+                  style={{
+                    display: selectedTab === 2 ? 'block' : 'none',
+                  }}
+                >
+                  <OthersTabContent
+                    formData={null}
+                    errors={validationErrors}
+                    clearError={clearError}
+                  />
+                </div>
+
+                {/* Tab 3: Review & Publish */}
+                <div
+                  style={{
+                    display: selectedTab === 3 ? 'block' : 'none',
+                  }}
+                >
+                  <ReviewPublishTabContent
+                    formData={null}
+                    locations={loaderData?.locations || []}
+                    staffMembers={loaderData?.staffMembers || []}
+                    onTabChange={setSelectedTab}
+                    errors={validationErrors}
+                    clearError={clearError}
+                  />
+                </div>
+
+                {/* Navigation Buttons */}
+                <s-section>
+                  <s-stack direction="inline" alignment="end">
+                    {selectedTab > 0 && (
+                      <s-button onClick={handlePrevious}>
+                        <s-icon type="arrow-left"></s-icon>
+                        Previous
+                      </s-button>
+                    )}
+                    {selectedTab < 3 ? (
+                      <s-button variant="primary" onClick={handleNext}>
+                        Next
+                      </s-button>
+                    ) : (
+                      <s-button
+                        variant="primary"
+                        onClick={handleSubmit}
+                        {...(isSubmitting ? { loading: true } : {})}
+                      >
+                        Save Service
+                      </s-button>
+                    )}
+                  </s-stack>
+                </s-section>
+              </s-stack>
             </Form>
           </s-grid-item>
           <s-grid-item gridColumn="span 5" gridRow="span 2">
