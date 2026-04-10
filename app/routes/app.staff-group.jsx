@@ -1,15 +1,24 @@
-import { useEffect, useState } from "react";
-import { Form, useActionData, useFetcher, useLoaderData, useNavigation } from "react-router";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
-import prisma from "../db.server";
-import { StaffGroupForm, StaffGroupListItem } from "../components/StaffGroupComponents";
+import { useEffect, useState } from 'react';
+import {
+  Form,
+  useActionData,
+  useFetcher,
+  useLoaderData,
+  useNavigation,
+} from 'react-router';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { boundary } from '@shopify/shopify-app-react-router/server';
+import { authenticate } from '../shopify.server';
+import prisma from '../db.server';
+import {
+  StaffGroupForm,
+  StaffGroupListItem,
+} from '../components/StaffGroupComponents';
 
 // Loader - Fetch all staff groups
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
-  
+
   // Find or create shop
   let shop = await prisma.shop.findUnique({
     where: { domain: session.shop },
@@ -32,7 +41,7 @@ export const loader = async ({ request }) => {
         select: { staffs: true },
       },
     },
-    orderBy: { id: "desc" },
+    orderBy: { id: 'desc' },
   });
 
   return { staffGroups, shopId: shop.id };
@@ -42,7 +51,7 @@ export const loader = async ({ request }) => {
 export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const formData = await request.formData();
-  const actionType = formData.get("_action");
+  const actionType = formData.get('_action');
 
   // Get shop
   const shop = await prisma.shop.findUnique({
@@ -50,22 +59,22 @@ export const action = async ({ request }) => {
   });
 
   if (!shop) {
-    return { error: "Shop not found" };
+    return { error: 'Shop not found' };
   }
 
   // DELETE
-  if (actionType === "delete") {
-    const staffGroupId = parseInt(formData.get("staffGroupId"));
+  if (actionType === 'delete') {
+    const staffGroupId = parseInt(formData.get('staffGroupId'));
     await prisma.staffGroup.delete({
       where: { id: staffGroupId },
     });
-    return { success: true, message: "Staff group deleted successfully" };
+    return { success: true, message: 'Staff group deleted successfully' };
   }
 
   // CREATE or UPDATE
-  const staffGroupId = formData.get("staffGroupId");
-  const name = formData.get("name");
-  const slug = formData.get("slug");
+  const staffGroupId = formData.get('staffGroupId');
+  const name = formData.get('name');
+  const slug = formData.get('slug');
 
   const staffGroupData = {
     name,
@@ -73,19 +82,27 @@ export const action = async ({ request }) => {
     shopId: shop.id,
   };
 
-  if (staffGroupId && staffGroupId !== "new") {
+  if (staffGroupId && staffGroupId !== 'new') {
     // UPDATE
     await prisma.staffGroup.update({
       where: { id: parseInt(staffGroupId) },
       data: staffGroupData,
     });
-    return { success: true, message: "Staff group updated successfully" };
+    return {
+      success: true,
+      message: 'Staff group updated successfully',
+      clear: true,
+    };
   } else {
     // CREATE
     await prisma.staffGroup.create({
       data: staffGroupData,
     });
-    return { success: true, message: "Staff group created successfully", clear: true };
+    return {
+      success: true,
+      message: 'Staff group created successfully',
+      clear: true,
+    };
   }
 };
 
@@ -99,13 +116,13 @@ export default function StaffGroupPage() {
   const [editingStaffGroup, setEditingStaffGroup] = useState(null);
   const [formKey, setFormKey] = useState(0);
 
-  const isSubmitting = navigation.state === "submitting";
+  const isSubmitting = navigation.state === 'submitting';
 
   // Show toast notification on success
   useEffect(() => {
     if (actionData?.success) {
       shopify.toast.show(actionData.message);
-      
+
       // Clear form after successful creation
       if (actionData.clear) {
         setEditingStaffGroup(null);
@@ -127,9 +144,9 @@ export default function StaffGroupPage() {
 
   const handleDelete = (staffGroupId) => {
     const formData = new FormData();
-    formData.append("_action", "delete");
-    formData.append("staffGroupId", staffGroupId);
-    fetcher.submit(formData, { method: "post" });
+    formData.append('_action', 'delete');
+    formData.append('staffGroupId', staffGroupId);
+    fetcher.submit(formData, { method: 'post' });
   };
 
   const handleCancel = () => {
@@ -138,7 +155,7 @@ export default function StaffGroupPage() {
   };
 
   const handleSubmit = () => {
-    const form = document.getElementById("staff-group-form");
+    const form = document.getElementById('staff-group-form');
     if (form) {
       if (form.checkValidity()) {
         form.requestSubmit();
@@ -149,7 +166,11 @@ export default function StaffGroupPage() {
   };
 
   return (
-    <s-page heading={editingStaffGroup ? "Edit Staff Group" : "Add Staff Group"} badge={editingStaffGroup ? "Edit" : "New"}>
+    <s-page
+      heading={editingStaffGroup ? 'Edit Staff Group' : 'Add Staff Group'}
+      badge={editingStaffGroup ? 'Edit' : 'New'}
+    >
+      <br />
       {editingStaffGroup && (
         <s-button slot="secondary-actions" onClick={handleCancel}>
           Cancel
@@ -161,85 +182,69 @@ export default function StaffGroupPage() {
         onClick={handleSubmit}
         {...(isSubmitting ? { loading: true } : {})}
       >
-        {editingStaffGroup ? "Update Staff Group" : "Save Staff Group"}
+        {editingStaffGroup ? 'Update Staff Group' : 'Save Staff Group'}
       </s-button>
 
       <Form method="post" id="staff-group-form" key={formKey}>
         <input
           type="hidden"
           name="staffGroupId"
-          value={editingStaffGroup?.id || "new"}
+          value={editingStaffGroup?.id || 'new'}
         />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="base">
           {/* Left Column - Form */}
-          <div>
+          <s-grid-item gridColumn="span 5">
             <s-section>
               <s-heading>Add Staff Group</s-heading>
               <StaffGroupForm formData={editingStaffGroup} />
             </s-section>
-          </div>
+          </s-grid-item>
 
           {/* Right Column - Staff Group List */}
-          <div>
+          <s-grid-item gridColumn="span 7">
             <s-section heading={`Staff Groups (${staffGroups.length})`}>
-              <s-paragraph>Organize your staff into groups for better management</s-paragraph>
+              <s-paragraph>
+                Organize your staff into groups for better management
+              </s-paragraph>
 
-              {/* List Header */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 2fr 1fr 40px",
-                  gap: "0.5rem",
-                  padding: "0.75rem 0.5rem",
-                  borderBottom: "1px solid #e1e3e5",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Category name</s-text>
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Slug</s-text>
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Services</s-text>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">More</s-text>
-                </div>
-              </div>
+              <s-section padding="none">
+                <s-table>
+                  <s-table-header-row>
+                    <s-table-header>Category name</s-table-header>
+                    <s-table-header>Slug</s-table-header>
+                    <s-table-header>Services</s-table-header>
+                    <s-table-header>Actions</s-table-header>
+                  </s-table-header-row>
 
-              {/* Staff Group List */}
-              <div>
-                {staffGroups.length === 0 ? (
-                  <div style={{ padding: "2rem", textAlign: "center" }}>
-                    <s-text color="subdued">
-                      No staff groups yet. Create your first staff group to get started.
-                    </s-text>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                    {staffGroups.map((staffGroup, index) => (
-                      <div
-                        key={staffGroup.id}
-                        style={{
-                          borderBottom: index < staffGroups.length - 1 ? "1px solid #e1e3e5" : "none",
-                        }}
-                      >
+                  <s-table-body>
+                    {staffGroups.length === 0 ? (
+                      <s-table-row>
+                        <s-table-cell>
+                          <div style={{ padding: '2rem', textAlign: 'center' }}>
+                            <s-text color="subdued">
+                              No staff groups yet. Create your first staff group
+                              to get started.
+                            </s-text>
+                          </div>
+                        </s-table-cell>
+                      </s-table-row>
+                    ) : (
+                      staffGroups.map((staffGroup) => (
                         <StaffGroupListItem
+                          key={staffGroup.id}
                           staffGroup={staffGroup}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
                         />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      ))
+                    )}
+                  </s-table-body>
+                </s-table>
+              </s-section>
             </s-section>
-          </div>
-        </div>
+          </s-grid-item>
+        </s-grid>
       </Form>
     </s-page>
   );
