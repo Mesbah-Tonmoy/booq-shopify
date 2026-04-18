@@ -1,15 +1,21 @@
-import { useEffect, useState } from "react";
-import { Form, useActionData, useFetcher, useLoaderData, useNavigation } from "react-router";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { boundary } from "@shopify/shopify-app-react-router/server";
-import { authenticate } from "../shopify.server";
-import prisma from "../db.server";
-import { StaffForm, StaffListItem } from "../components/StaffComponents";
+import { useEffect, useState } from 'react';
+import {
+  Form,
+  useActionData,
+  useFetcher,
+  useLoaderData,
+  useNavigation,
+} from 'react-router';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { boundary } from '@shopify/shopify-app-react-router/server';
+import { authenticate } from '../shopify.server';
+import prisma from '../db.server';
+import { StaffForm, StaffListItem } from '../components/StaffComponents';
 
 // Loader - Fetch all staff members with relations
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
-  
+
   // Find or create shop
   let shop = await prisma.shop.findUnique({
     where: { domain: session.shop },
@@ -31,7 +37,7 @@ export const loader = async ({ request }) => {
       location: true,
       staffGroup: true,
     },
-    orderBy: { menuOrderBy: "asc" },
+    orderBy: { menuOrderBy: 'asc' },
   });
 
   // Fetch locations and staff groups for dropdowns
@@ -52,7 +58,7 @@ export const loader = async ({ request }) => {
 export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const formData = await request.formData();
-  const actionType = formData.get("_action");
+  const actionType = formData.get('_action');
 
   // Get shop
   const shop = await prisma.shop.findUnique({
@@ -60,39 +66,43 @@ export const action = async ({ request }) => {
   });
 
   if (!shop) {
-    return { error: "Shop not found" };
+    return { error: 'Shop not found' };
   }
 
   // DELETE
-  if (actionType === "delete") {
-    const staffId = parseInt(formData.get("staffId"));
+  if (actionType === 'delete') {
+    const staffId = parseInt(formData.get('staffId'));
     await prisma.staff.delete({
       where: { id: staffId },
     });
-    return { success: true, message: "Staff member deleted successfully" };
+    return { success: true, message: 'Staff member deleted successfully' };
   }
 
   // CREATE or UPDATE
-  const staffId = formData.get("staffId");
-  const name = formData.get("name");
-  const email = formData.get("email") || null;
-  const phone = formData.get("phone");
+  const staffId = formData.get('staffId');
+  const name = formData.get('name');
+  const email = formData.get('email') || null;
+  const phone = formData.get('phone');
 
   // Validate required fields
-  if (!name || name.trim() === "") {
-    return { error: "Name is required" };
+  if (!name || name.trim() === '') {
+    return { error: 'Name is required' };
   }
-  if (!phone || phone.trim() === "") {
-    return { error: "Phone number is required" };
+  if (!phone || phone.trim() === '') {
+    return { error: 'Phone number is required' };
   }
-  const bio = formData.get("bio") || null;
-  const photoUrl = formData.get("photoUrl") || null;
-  const timezone = formData.get("timezone");
-  const status = formData.get("status");
-  const menuOrderBy = parseInt(formData.get("menuOrderBy")) || 0;
-  const maxCapacity = parseInt(formData.get("maxCapacity")) || 1;
-  const locationId = formData.get("locationId") ? parseInt(formData.get("locationId")) : null;
-  const staffGroupId = formData.get("staffGroupId") ? parseInt(formData.get("staffGroupId")) : null;
+  const bio = formData.get('bio') || null;
+  const photoUrl = formData.get('photoUrl') || null;
+  const timezone = formData.get('timezone');
+  const status = formData.get('status');
+  const menuOrderBy = parseInt(formData.get('menuOrderBy')) || 0;
+  const maxCapacity = parseInt(formData.get('maxCapacity')) || 1;
+  const locationId = formData.get('locationId')
+    ? parseInt(formData.get('locationId'))
+    : null;
+  const staffGroupId = formData.get('staffGroupId')
+    ? parseInt(formData.get('staffGroupId'))
+    : null;
 
   const staffData = {
     name: name.trim(),
@@ -109,19 +119,27 @@ export const action = async ({ request }) => {
     staffGroupId,
   };
 
-  if (staffId && staffId !== "new") {
+  if (staffId && staffId !== 'new') {
     // UPDATE
     await prisma.staff.update({
       where: { id: parseInt(staffId) },
       data: staffData,
     });
-    return { success: true, message: "Staff member updated successfully" };
+    return {
+      success: true,
+      message: 'Staff member updated successfully',
+      clear: true,
+    };
   } else {
     // CREATE
     await prisma.staff.create({
       data: staffData,
     });
-    return { success: true, message: "Staff member created successfully", clear: true };
+    return {
+      success: true,
+      message: 'Staff member created successfully',
+      clear: true,
+    };
   }
 };
 
@@ -135,13 +153,13 @@ export default function StaffPage() {
   const [editingStaff, setEditingStaff] = useState(null);
   const [formKey, setFormKey] = useState(0);
 
-  const isSubmitting = navigation.state === "submitting";
+  const isSubmitting = navigation.state === 'submitting';
 
   // Show toast notification on success
   useEffect(() => {
     if (actionData?.success) {
       shopify.toast.show(actionData.message);
-      
+
       // Clear form after successful creation
       if (actionData.clear) {
         setEditingStaff(null);
@@ -166,9 +184,9 @@ export default function StaffPage() {
 
   const handleDelete = (staffId) => {
     const formData = new FormData();
-    formData.append("_action", "delete");
-    formData.append("staffId", staffId);
-    fetcher.submit(formData, { method: "post" });
+    formData.append('_action', 'delete');
+    formData.append('staffId', staffId);
+    fetcher.submit(formData, { method: 'post' });
   };
 
   const handleCancel = () => {
@@ -177,7 +195,7 @@ export default function StaffPage() {
   };
 
   const handleSubmit = () => {
-    const form = document.getElementById("staff-form");
+    const form = document.getElementById('staff-form');
     if (form) {
       if (form.checkValidity()) {
         form.requestSubmit();
@@ -188,7 +206,10 @@ export default function StaffPage() {
   };
 
   return (
-    <s-page heading={editingStaff ? "Edit Staff Member" : "Add Staff Member"} badge={editingStaff ? "Edit" : "New"}>
+    <s-page
+      heading={editingStaff ? 'Edit Staff Member' : 'Add Staff Member'}
+      badge={editingStaff ? 'Edit' : 'New'}
+    >
       {editingStaff && (
         <s-button slot="secondary-actions" onClick={handleCancel}>
           Cancel
@@ -200,33 +221,31 @@ export default function StaffPage() {
         onClick={handleSubmit}
         {...(isSubmitting ? { loading: true } : {})}
       >
-        {editingStaff ? "Update Staff Member" : "Create Staff Member"}
+        {editingStaff ? 'Update Staff Member' : 'Create Staff Member'}
       </s-button>
 
       <Form method="post" id="staff-form" key={formKey}>
-        <input
-          type="hidden"
-          name="staffId"
-          value={editingStaff?.id || "new"}
-        />
+        <input type="hidden" name="staffId" value={editingStaff?.id || 'new'} />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="base">
           {/* Left Column - Form */}
-          <div>
-            <StaffForm 
-              formData={editingStaff} 
+          <s-grid-item gridColumn="span 5">
+            <StaffForm
+              formData={editingStaff}
               locations={locations}
               staffGroups={staffGroups}
             />
-          </div>
+          </s-grid-item>
 
           {/* Right Column - Staff List */}
-          <div>
+          <s-grid-item gridColumn="span 7">
             <s-section heading={`Staff Members (${staffs.length})`}>
-              <s-paragraph>Manage your team members and their settings</s-paragraph>
+              <s-paragraph>
+                Manage your team members and their settings
+              </s-paragraph>
 
               {/* Search and Filter */}
-              <div style={{ marginBottom: "1rem" }}>
+              <div style={{ marginBottom: '1rem' }}>
                 <s-text-field
                   label="Search staff members"
                   label-accessibility-visibility="hidden"
@@ -235,64 +254,43 @@ export default function StaffPage() {
                 />
               </div>
 
-              {/* List Header */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1.5fr 1fr 0.8fr 40px",
-                  gap: "0.5rem",
-                  padding: "0.75rem 0.5rem",
-                  borderBottom: "1px solid #e1e3e5",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Staff Member</s-text>
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Location</s-text>
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Status</s-text>
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Bookings</s-text>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <s-text variant="body-sm" fontWeight="semibold">Action</s-text>
-                </div>
-              </div>
-
               {/* Staff List */}
-              <div>
-                {staffs.length === 0 ? (
-                  <div style={{ padding: "2rem", textAlign: "center" }}>
-                    <s-text color="subdued">
-                      No staff members yet. Create your first staff member to get started.
-                    </s-text>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                    {staffs.map((staff, index) => (
-                      <div
+              <s-table>
+                <s-table-header-row>
+                  <s-table-header>Staff Member</s-table-header>
+                  <s-table-header>Location</s-table-header>
+                  <s-table-header>Status</s-table-header>
+                  <s-table-header>Bookings</s-table-header>
+                  <s-table-header>Action</s-table-header>
+                </s-table-header-row>
+
+                <s-table-body>
+                  {staffs.length === 0 ? (
+                    <s-table-row>
+                      <s-table-cell>
+                        <div style={{ padding: '2rem', textAlign: 'center' }}>
+                          <s-text color="subdued">
+                            No staff members yet. Create your first staff member
+                            to get started.
+                          </s-text>
+                        </div>
+                      </s-table-cell>
+                    </s-table-row>
+                  ) : (
+                    staffs.map((staff) => (
+                      <StaffListItem
                         key={staff.id}
-                        style={{
-                          borderBottom: index < staffs.length - 1 ? "1px solid #e1e3e5" : "none",
-                        }}
-                      >
-                        <StaffListItem
-                          staff={staff}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        staff={staff}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    ))
+                  )}
+                </s-table-body>
+              </s-table>
             </s-section>
-          </div>
-        </div>
+          </s-grid-item>
+        </s-grid>
       </Form>
     </s-page>
   );
