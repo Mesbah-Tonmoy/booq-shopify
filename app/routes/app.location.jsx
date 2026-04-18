@@ -9,6 +9,7 @@ import {
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { boundary } from '@shopify/shopify-app-react-router/server';
 import { authenticate } from '../shopify.server';
+
 import prisma from '../db.server';
 
 import {
@@ -225,6 +226,19 @@ export default function LocationPage() {
       heading={editingLocation ? 'Edit Location' : 'Add New Location'}
       badge={editingLocation ? 'Edit' : 'New'}
     >
+      {editingLocation && (
+        <s-button slot="secondary-actions" onClick={handleCancel}>
+          Cancel
+        </s-button>
+      )}
+      <s-button
+        slot="primary-action"
+        variant="primary"
+        onClick={handleSubmit}
+        {...(isSubmitting ? { loading: true } : {})}
+      >
+        {editingLocation ? 'Update Location' : 'Save Location'}
+      </s-button>
       <s-stack gap="base base">
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button
@@ -260,19 +274,6 @@ export default function LocationPage() {
             Advanced settings
           </button>
         </div>
-        <s-button
-          slot="primary-action"
-          variant="primary"
-          onClick={handleSubmit}
-          {...(isSubmitting ? { loading: true } : {})}
-        >
-          {editingLocation ? 'Update Location' : 'Save Location'}
-        </s-button>
-        {editingLocation && (
-          <s-button slot="secondary-actions" onClick={handleCancel}>
-            Cancel
-          </s-button>
-        )}
 
         <Form method="post" id="location-form" key={formKey}>
           <input
@@ -297,81 +298,40 @@ export default function LocationPage() {
                   Manage your business locations and their settings.
                 </s-paragraph>
 
-                {/* List Header */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '2fr 2fr 1fr 1fr 40px',
-                    gap: '0.5rem',
-                    padding: '0.75rem 0.5rem',
-                    borderBottom: '1px solid #e1e3e5',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <div style={{ textAlign: 'left' }}>
-                    <s-text variant="body-sm" fontWeight="semibold">
-                      Location
-                    </s-text>
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <s-text variant="body-sm" fontWeight="semibold">
-                      Country
-                    </s-text>
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <s-text variant="body-sm" fontWeight="semibold">
-                      Status
-                    </s-text>
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <s-text variant="body-sm" fontWeight="semibold">
-                      Limit
-                    </s-text>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <s-text variant="body-sm" fontWeight="semibold">
-                      Action
-                    </s-text>
-                  </div>
-                </div>
-
                 {/* Location List */}
-                <div>
-                  {locations.length === 0 ? (
-                    <div style={{ padding: '2rem', textAlign: 'center' }}>
-                      <s-text color="subdued">
-                        No locations yet. Create your first location to get
-                        started.
-                      </s-text>
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0',
-                      }}
-                    >
-                      {locations.map((location, index) => (
-                        <div
+                <s-table>
+                  <s-table-header-row>
+                    <s-table-header>Location</s-table-header>
+                    <s-table-header>Country</s-table-header>
+                    <s-table-header>Status</s-table-header>
+                    <s-table-header>Limit</s-table-header>
+                    <s-table-header>Action</s-table-header>
+                  </s-table-header-row>
+
+                  <s-table-body>
+                    {locations.length === 0 ? (
+                      <s-table-row>
+                        <s-table-cell>
+                          <div style={{ padding: '2rem', textAlign: 'center' }}>
+                            <s-text color="subdued">
+                              No locations yet. Create your first location to
+                              get started.
+                            </s-text>
+                          </div>
+                        </s-table-cell>
+                      </s-table-row>
+                    ) : (
+                      locations.map((location) => (
+                        <LocationListItem
                           key={location.id}
-                          style={{
-                            borderBottom:
-                              index < locations.length - 1
-                                ? '1px solid #e1e3e5'
-                                : 'none',
-                          }}
-                        >
-                          <LocationListItem
-                            location={location}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                          location={location}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      ))
+                    )}
+                  </s-table-body>
+                </s-table>
               </s-section>
             </s-grid-item>
           </s-grid>
