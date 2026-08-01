@@ -165,7 +165,10 @@ export default function SettingsPage() {
           </div>
 
           <div className={activeTab === 0 ? 'block' : 'hidden'}>
-            <GeneralConfigTab widgetSettings={widgetSettings} />
+            <GeneralConfigTab
+              widgetSettings={widgetSettings}
+              settings={settings}
+            />
           </div>
 
           <div className={activeTab === 1 ? 'block' : 'hidden'}>

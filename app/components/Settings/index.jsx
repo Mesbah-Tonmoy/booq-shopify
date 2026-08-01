@@ -6,3 +6,8 @@ export { WidgetPositioningSection } from './WidgetPositioningSection';
 export { FunctionalControlsSection } from './FunctionalControlsSection';
 export { CustomerNotificationsSection } from './CustomerNotificationsSection';
 export { OwnerNotificationsSection } from './OwnerNotificationsSection';
+export { HolidaysSection } from './HolidaysSection';
+export { CalendarSettingsSection } from './CalendarSettingsSection';
+export { DateTimeFormatsSection } from './DateTimeFormatsSection';
+export { AdvancedSettingsSection } from './AdvancedSettingsSection';
+export { ShopSettingsSection } from './ShopSettingsSection';
