@@ -13,6 +13,8 @@ import { getJSON, getString } from '../utils/formData';
 import type { Prisma } from '@prisma/client';
 import { useWidgetSettings } from '../hooks/useWidgetSettings';
 import { useNotificationSettings } from '../hooks/useNotificationSettings';
+import { useHolidaySettings } from '../hooks/useHolidaySettings';
+import { useEmailTemplateSettings } from '../hooks/useEmailTemplateSettings';
 import {
   SettingsTabs,
   GeneralConfigTab,
@@ -21,6 +23,8 @@ import {
 } from '../components/Settings';
 import type {
   CustomerNotificationSettings,
+  EmailTemplates,
+  HolidaySettings,
   OwnerNotificationSettings,
   ShopSetting,
   WidgetSettings,
@@ -45,7 +49,25 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     });
   }
 
-  return { shop, settings: shop.settings || null };
+  const previewService = await prisma.service.findFirst({
+    where: { shopId: shop.id, status: 'active' },
+    orderBy: { createdAt: 'asc' },
+    select: { name: true },
+  });
+
+  const previewStaff = await prisma.staff.findMany({
+    where: { shopId: shop.id, status: 'active' },
+    take: 2,
+    orderBy: { menuOrderBy: 'asc' },
+    select: { name: true, photoUrl: true },
+  });
+
+  return {
+    shop,
+    settings: shop.settings || null,
+    previewService,
+    previewStaff,
+  };
 };
 
 export const action = async ({ request }: Route.ActionArgs) => {
@@ -72,6 +94,14 @@ export const action = async ({ request }: Route.ActionArgs) => {
     formData,
     'ownerNotificationSettings'
   );
+  const holidaySettingsData = getJSON<HolidaySettings>(
+    formData,
+    'holidaySettings'
+  );
+  const emailTemplatesData = getJSON<EmailTemplates>(
+    formData,
+    'emailTemplates'
+  );
 
   const shopSettingsData: ShopSetting = {
     companyName: getString(formData, 'companyName') || null,
@@ -93,6 +123,12 @@ export const action = async ({ request }: Route.ActionArgs) => {
     | Prisma.InputJsonValue
     | undefined;
   const shopSettingJson = shopSettingsData as unknown as Prisma.InputJsonValue;
+  const holidaySettingsJson = (holidaySettingsData ?? undefined) as
+    | Prisma.InputJsonValue
+    | undefined;
+  const emailTemplatesJson = (emailTemplatesData ?? undefined) as
+    | Prisma.InputJsonValue
+    | undefined;
 
   await prisma.settings.upsert({
     where: { shopId: shop.id },
@@ -117,6 +153,8 @@ export const action = async ({ request }: Route.ActionArgs) => {
       customerNotificationSettings: customerNotificationJson,
       ownerNotificationSettings: ownerNotificationJson,
       shopSetting: shopSettingJson,
+      holidaySettings: holidaySettingsJson,
+      emailTemplates: emailTemplatesJson,
     },
     update: {
       weekStartsOn: getString(formData, 'weekStartsOn') || 'Sunday',
@@ -138,6 +176,8 @@ export const action = async ({ request }: Route.ActionArgs) => {
       customerNotificationSettings: customerNotificationJson,
       ownerNotificationSettings: ownerNotificationJson,
       shopSetting: shopSettingJson,
+      holidaySettings: holidaySettingsJson,
+      emailTemplates: emailTemplatesJson,
     },
   });
 
@@ -151,7 +191,8 @@ const TABS = [
 ];
 
 export default function SettingsPage() {
-  const { settings } = useLoaderData<typeof loader>();
+  const { settings, previewService, previewStaff } =
+    useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const shopify = useAppBridge();
@@ -159,6 +200,8 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState(0);
   const widgetSettings = useWidgetSettings(settings);
   const notificationSettings = useNotificationSettings(settings);
+  const holidaySettings = useHolidaySettings(settings);
+  const emailTemplateSettings = useEmailTemplateSettings(settings);
 
   const isSubmitting = navigation.state === 'submitting';
 
@@ -203,18 +246,28 @@ export default function SettingsPage() {
           <div className={activeTab === 0 ? 'block' : 'hidden'}>
             <GeneralConfigTab
               widgetSettings={widgetSettings}
+              holidaySettings={holidaySettings}
               settings={settings}
+              previewService={previewService}
+              previewStaff={previewStaff}
             />
           </div>
 
           <div className={activeTab === 1 ? 'block' : 'hidden'}>
-            <WidgetStyleTab widgetSettings={widgetSettings} />
+            <WidgetStyleTab
+              widgetSettings={widgetSettings}
+              previewService={previewService}
+              previewStaff={previewStaff}
+            />
           </div>
 
           <div className={activeTab === 2 ? 'block' : 'hidden'}>
             <NotificationsTab
               notificationSettings={notificationSettings}
               widgetSettings={widgetSettings}
+              emailTemplateSettings={emailTemplateSettings}
+              previewService={previewService}
+              previewStaff={previewStaff}
             />
           </div>
         </s-stack>

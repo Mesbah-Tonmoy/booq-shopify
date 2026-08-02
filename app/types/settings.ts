@@ -6,6 +6,9 @@ export interface WidgetSettings {
   showStaffPhotos?: boolean;
   showDuration?: boolean;
   showReviews?: boolean;
+  accentColor?: string;
+  addToCartButtonText?: string;
+  bookNowButtonText?: string;
 }
 
 export interface CustomerNotificationSettings {
@@ -28,3 +31,22 @@ export interface ShopSetting {
   additionalEmails?: string | null;
   refundOnBookingCancel?: boolean;
 }
+
+export interface HolidaySettings {
+  country: string;
+  enabled: boolean;
+  enabledHolidayIds: string[];
+}
+
+export type EmailTemplateKey =
+  | 'bookingConfirmation'
+  | 'cancellation'
+  | 'reminder'
+  | 'ownerNewBookingAlert';
+
+export interface EmailTemplateContent {
+  subject: string;
+  body: string;
+}
+
+export type EmailTemplates = Record<EmailTemplateKey, EmailTemplateContent>;

@@ -1,18 +1,30 @@
 import { useState } from 'react';
 import type { NotificationSettings } from '../../hooks/useNotificationSettings';
 import type { WidgetSettingsState } from '../../hooks/useWidgetSettings';
-import { WidgetPreview } from '../WidgetPreview';
+import type { EmailTemplateSettingsState } from '../../hooks/useEmailTemplateSettings';
+import {
+  WidgetPreview,
+  type WidgetPreviewService,
+  type WidgetPreviewStaffMember,
+} from '../WidgetPreview';
 import { CustomerNotificationsSection } from './CustomerNotificationsSection';
 import { OwnerNotificationsSection } from './OwnerNotificationsSection';
+import { EmailTemplatesSection } from './EmailTemplatesSection';
 
 interface NotificationsTabProps {
   notificationSettings: NotificationSettings;
   widgetSettings: WidgetSettingsState;
+  emailTemplateSettings: EmailTemplateSettingsState;
+  previewService?: WidgetPreviewService | null;
+  previewStaff?: WidgetPreviewStaffMember[];
 }
 
 export function NotificationsTab({
   notificationSettings,
   widgetSettings,
+  emailTemplateSettings,
+  previewService,
+  previewStaff,
 }: NotificationsTabProps) {
   const { customer, owner } = notificationSettings;
 
@@ -36,16 +48,17 @@ export function NotificationsTab({
             onToggle={() => toggle('owner')}
             {...owner}
           />
+
+          <EmailTemplatesSection
+            templates={emailTemplateSettings.templates}
+            updateTemplate={emailTemplateSettings.updateTemplate}
+          />
         </div>
 
         <WidgetPreview
-          dateTimePickerPosition={widgetSettings.dateTimePickerPosition}
-          hideEndTime={widgetSettings.hideEndTime}
-          hideSlotAvailabilityCount={widgetSettings.hideSlotAvailabilityCount}
-          showPricing={widgetSettings.showPricing}
-          showStaffPhotos={widgetSettings.showStaffPhotos}
-          showDuration={widgetSettings.showDuration}
-          showReviews={widgetSettings.showReviews}
+          {...widgetSettings}
+          service={previewService}
+          staff={previewStaff}
         />
       </div>
 
@@ -68,6 +81,11 @@ export function NotificationsTab({
           cancellationAlerts: owner.cancellationAlerts,
           emailDigestFrequency: owner.emailDigestFrequency,
         })}
+      />
+      <input
+        type="hidden"
+        name="emailTemplates"
+        value={JSON.stringify(emailTemplateSettings.templates)}
       />
     </>
   );

@@ -24,6 +24,13 @@ export function useWidgetSettings(settings: Settings | null | undefined) {
   const [showReviews, setShowReviews] = useState(
     w.showReviews !== undefined ? w.showReviews : true
   );
+  const [accentColor, setAccentColor] = useState(w.accentColor || '#000000');
+  const [addToCartButtonText, setAddToCartButtonText] = useState(
+    w.addToCartButtonText || 'Add To Cart'
+  );
+  const [bookNowButtonText, setBookNowButtonText] = useState(
+    w.bookNowButtonText || 'Book Now'
+  );
 
   return {
     dateTimePickerPosition,
@@ -40,6 +47,12 @@ export function useWidgetSettings(settings: Settings | null | undefined) {
     setShowDuration,
     showReviews,
     setShowReviews,
+    accentColor,
+    setAccentColor,
+    addToCartButtonText,
+    setAddToCartButtonText,
+    bookNowButtonText,
+    setBookNowButtonText,
   };
 }
 

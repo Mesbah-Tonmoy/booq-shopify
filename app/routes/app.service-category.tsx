@@ -14,8 +14,8 @@ import { getInt, getString } from '../utils/formData';
 import {
   ServiceCategoryForm,
   ServiceCategoryListItem,
+  type ServiceCategoryWithCount,
 } from '../components/ServiceCategoryComponents';
-import type { ServiceCategory } from '@prisma/client';
 import type { Route } from './+types/app.service-category';
 
 // Loader - Fetch all service categories
@@ -42,7 +42,22 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     orderBy: { id: 'desc' },
   });
 
-  return { serviceCategories, shopId: shop.id };
+  // Service.category is a plain string matched by name (no FK relation to
+  // ServiceCategory), so counts are computed via a grouped query and merged in.
+  const categoryCounts = await prisma.service.groupBy({
+    by: ['category'],
+    where: { shopId: shop.id, category: { not: null } },
+    _count: { _all: true },
+  });
+  const countByName = new Map(
+    categoryCounts.map((c) => [c.category, c._count._all])
+  );
+  const serviceCategoriesWithCount = serviceCategories.map((sc) => ({
+    ...sc,
+    serviceCount: countByName.get(sc.name) ?? 0,
+  }));
+
+  return { serviceCategories: serviceCategoriesWithCount, shopId: shop.id };
 };
 
 // Action - Handle CRUD operations
@@ -116,7 +131,7 @@ export default function ServiceCategoryPage() {
   const shopify = useAppBridge();
 
   const [editingServiceCategory, setEditingServiceCategory] =
-    useState<ServiceCategory | null>(null);
+    useState<ServiceCategoryWithCount | null>(null);
   const [formKey, setFormKey] = useState(0);
 
   const isSubmitting = navigation.state === 'submitting';
@@ -144,7 +159,7 @@ export default function ServiceCategoryPage() {
     }
   }, [fetcher.data, shopify]);
 
-  const handleEdit = (serviceCategory: ServiceCategory) => {
+  const handleEdit = (serviceCategory: ServiceCategoryWithCount) => {
     setEditingServiceCategory(serviceCategory);
   };
 
@@ -250,7 +265,7 @@ export default function ServiceCategoryPage() {
                       </s-table-row>
                     ) : (
                       serviceCategories.map(
-                        (serviceCategory: ServiceCategory) => (
+                        (serviceCategory: ServiceCategoryWithCount) => (
                           <ServiceCategoryListItem
                             key={serviceCategory.id}
                             serviceCategory={serviceCategory}

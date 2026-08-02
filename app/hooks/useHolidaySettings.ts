@@ -1,14 +1,22 @@
 import { useMemo, useState } from 'react';
+import type { Settings } from '@prisma/client';
 import {
   HOLIDAY_COUNTRIES,
   getHolidaysForCountry,
   type HolidayCountry,
 } from '../data/holidayData';
+import type { HolidaySettings } from '../types/settings';
 
-export function useHolidaySettings() {
-  const [country, setCountry] = useState<HolidayCountry>(HOLIDAY_COUNTRIES[0]);
-  const [countryEnabled, setCountryEnabled] = useState(false);
-  const [enabledHolidayIds, setEnabledHolidayIds] = useState<string[]>([]);
+export function useHolidaySettings(settings: Settings | null | undefined) {
+  const saved = settings?.holidaySettings as HolidaySettings | null;
+
+  const [country, setCountry] = useState<HolidayCountry>(
+    (saved?.country as HolidayCountry) || HOLIDAY_COUNTRIES[0]
+  );
+  const [countryEnabled, setCountryEnabled] = useState(saved?.enabled ?? false);
+  const [enabledHolidayIds, setEnabledHolidayIds] = useState<string[]>(
+    saved?.enabledHolidayIds ?? []
+  );
 
   const countryHolidays = useMemo(
     () => getHolidaysForCountry(country),
@@ -25,6 +33,7 @@ export function useHolidaySettings() {
     setCountry,
     countryEnabled,
     setCountryEnabled,
+    enabledHolidayIds,
     holidays: countryHolidays.map((holiday) => ({
       ...holiday,
       enabled: enabledHolidayIds.includes(holiday.id),
@@ -32,3 +41,5 @@ export function useHolidaySettings() {
     toggleHoliday,
   };
 }
+
+export type HolidaySettingsState = ReturnType<typeof useHolidaySettings>;

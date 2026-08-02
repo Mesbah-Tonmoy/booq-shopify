@@ -1,5 +1,24 @@
 import type { WidgetSettings } from '../types/settings';
 
+export interface WidgetPreviewService {
+  name: string;
+}
+
+export interface WidgetPreviewStaffMember {
+  name: string;
+  photoUrl?: string | null;
+}
+
+interface WidgetPreviewProps extends WidgetSettings {
+  service?: WidgetPreviewService | null;
+  staff?: WidgetPreviewStaffMember[];
+}
+
+const SAMPLE_STAFF: WidgetPreviewStaffMember[] = [
+  { name: 'Jane S.' },
+  { name: 'Alex M.' },
+];
+
 export const WidgetPreview = ({
   dateTimePickerPosition = 'before_add_to_cart',
   hideEndTime = false,
@@ -8,7 +27,16 @@ export const WidgetPreview = ({
   showStaffPhotos = true,
   showDuration = true,
   showReviews = true,
-}: WidgetSettings) => {
+  accentColor = '#000000',
+  addToCartButtonText = 'Add To Cart',
+  bookNowButtonText = 'Book Now',
+  service,
+  staff,
+}: WidgetPreviewProps) => {
+  const isSampleData = !service;
+  const serviceName = service?.name ?? 'Haircut & Styling Session';
+  const staffList =
+    staff && staff.length > 0 ? staff.slice(0, 2) : SAMPLE_STAFF;
   const renderDatePicker = () => {
     if (dateTimePickerPosition === 'custom') {
       return (
@@ -98,9 +126,16 @@ export const WidgetPreview = ({
 
   return (
     <div className="bg-white rounded-lg border border-[#e1e3e5] p-6">
-      <s-heading className="mb-6 block text-[#202223] font-semibold">
+      <s-heading className="mb-1 block text-[#202223] font-semibold">
         Widget Setting Preview
       </s-heading>
+      <div className="mb-5">
+        {isSampleData && (
+          <s-text color="subdued">
+            Preview shown with sample data — create a service to see it here.
+          </s-text>
+        )}
+      </div>
 
       {/* Product Widget Preview Container */}
       <div className="flex gap-4 mb-8 p-4 bg-[#f6f6f7] rounded-lg">
@@ -113,7 +148,7 @@ export const WidgetPreview = ({
         <div className="flex-1 flex flex-col gap-2">
           {/* Title */}
           <s-heading className="block text-[#202223] font-semibold">
-            Haircut & Styling Session
+            {serviceName}
           </s-heading>
 
           {/* Reviews Rating */}
@@ -153,26 +188,35 @@ export const WidgetPreview = ({
                 Select Specialist
               </s-text>
               <div className="flex gap-3">
-                {[
-                  { name: 'Jane S.', initial: 'JS', active: true },
-                  { name: 'Alex M.', initial: 'AM' },
-                ].map((staff, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center gap-2 p-1.5 pr-3 rounded-full border transition-all cursor-pointer ${
-                      staff.active
-                        ? 'border-black bg-white shadow-sm ring-1 ring-black'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-700">
-                      {staff.initial}
+                {staffList.map((member, i) => {
+                  const initial = member.name.charAt(0).toUpperCase();
+                  const active = i === 0;
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-center gap-2 p-1.5 pr-3 rounded-full border transition-all cursor-pointer ${
+                        active
+                          ? 'border-black bg-white shadow-sm ring-1 ring-black'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      {member.photoUrl ? (
+                        <img
+                          src={member.photoUrl}
+                          alt={member.name}
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-700">
+                          {initial}
+                        </div>
+                      )}
+                      <span className="text-[11px] font-medium text-gray-800">
+                        {member.name}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-medium text-gray-800">
-                      {staff.name}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -184,10 +228,13 @@ export const WidgetPreview = ({
           {/* Add To Cart & Book Now Buttons */}
           <div className="mt-auto flex flex-col gap-2">
             <div className="h-10 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center font-medium text-gray-700 border border-gray-200 cursor-pointer transition-colors text-[14px]">
-              Add To Cart
+              {addToCartButtonText}
             </div>
-            <div className="h-10 bg-black hover:bg-gray-900 rounded-lg flex items-center justify-center font-medium text-white cursor-pointer transition-colors text-[14px]">
-              Book Now
+            <div
+              className="h-10 rounded-lg flex items-center justify-center font-medium text-white cursor-pointer transition-colors text-[14px]"
+              style={{ backgroundColor: accentColor }}
+            >
+              {bookNowButtonText}
             </div>
           </div>
 
@@ -216,8 +263,11 @@ export const WidgetPreview = ({
                   {i === 1 ? '$50.00' : '$120.00'}
                 </span>
               )}
-              <div className="h-9 bg-black hover:bg-gray-900 rounded-lg flex items-center justify-center font-medium text-white text-[13px] cursor-pointer transition-colors">
-                Book Now
+              <div
+                className="h-9 rounded-lg flex items-center justify-center font-medium text-white text-[13px] cursor-pointer transition-colors"
+                style={{ backgroundColor: accentColor }}
+              >
+                {bookNowButtonText}
               </div>
             </div>
           ))}

@@ -1,13 +1,24 @@
 import type { WidgetSettingsState } from '../../hooks/useWidgetSettings';
-import { WidgetPreview } from '../WidgetPreview';
+import {
+  WidgetPreview,
+  type WidgetPreviewService,
+  type WidgetPreviewStaffMember,
+} from '../WidgetPreview';
 import { WidgetPositioningSection } from './WidgetPositioningSection';
 import { FunctionalControlsSection } from './FunctionalControlsSection';
+import { BrandingSection } from './BrandingSection';
 
 interface WidgetStyleTabProps {
   widgetSettings: WidgetSettingsState;
+  previewService?: WidgetPreviewService | null;
+  previewStaff?: WidgetPreviewStaffMember[];
 }
 
-export function WidgetStyleTab({ widgetSettings }: WidgetStyleTabProps) {
+export function WidgetStyleTab({
+  widgetSettings,
+  previewService,
+  previewStaff,
+}: WidgetStyleTabProps) {
   const {
     dateTimePickerPosition,
     setDateTimePickerPosition,
@@ -23,6 +34,12 @@ export function WidgetStyleTab({ widgetSettings }: WidgetStyleTabProps) {
     setShowDuration,
     showReviews,
     setShowReviews,
+    accentColor,
+    setAccentColor,
+    addToCartButtonText,
+    setAddToCartButtonText,
+    bookNowButtonText,
+    setBookNowButtonText,
   } = widgetSettings;
 
   return (
@@ -48,16 +65,21 @@ export function WidgetStyleTab({ widgetSettings }: WidgetStyleTabProps) {
             showReviews={showReviews}
             setShowReviews={setShowReviews}
           />
+
+          <BrandingSection
+            accentColor={accentColor}
+            setAccentColor={setAccentColor}
+            addToCartButtonText={addToCartButtonText}
+            setAddToCartButtonText={setAddToCartButtonText}
+            bookNowButtonText={bookNowButtonText}
+            setBookNowButtonText={setBookNowButtonText}
+          />
         </div>
 
         <WidgetPreview
-          dateTimePickerPosition={dateTimePickerPosition}
-          hideEndTime={hideEndTime}
-          hideSlotAvailabilityCount={hideSlotAvailabilityCount}
-          showPricing={showPricing}
-          showStaffPhotos={showStaffPhotos}
-          showDuration={showDuration}
-          showReviews={showReviews}
+          {...widgetSettings}
+          service={previewService}
+          staff={previewStaff}
         />
       </div>
 
@@ -72,6 +94,9 @@ export function WidgetStyleTab({ widgetSettings }: WidgetStyleTabProps) {
           showStaffPhotos,
           showDuration,
           showReviews,
+          accentColor,
+          addToCartButtonText,
+          bookNowButtonText,
         })}
       />
     </>

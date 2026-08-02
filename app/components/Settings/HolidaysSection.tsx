@@ -1,5 +1,5 @@
 import { HOLIDAY_COUNTRIES, type HolidayCountry } from '../../data/holidayData';
-import { useHolidaySettings } from '../../hooks/useHolidaySettings';
+import type { HolidaySettingsState } from '../../hooks/useHolidaySettings';
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
@@ -7,16 +7,24 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-export function HolidaysSection() {
-  const {
-    country,
-    setCountry,
-    countryEnabled,
-    setCountryEnabled,
-    holidays,
-    toggleHoliday,
-  } = useHolidaySettings();
+type HolidaysSectionProps = Pick<
+  HolidaySettingsState,
+  | 'country'
+  | 'setCountry'
+  | 'countryEnabled'
+  | 'setCountryEnabled'
+  | 'holidays'
+  | 'toggleHoliday'
+>;
 
+export function HolidaysSection({
+  country,
+  setCountry,
+  countryEnabled,
+  setCountryEnabled,
+  holidays,
+  toggleHoliday,
+}: HolidaysSectionProps) {
   return (
     <s-stack direction="block" gap="base">
       <s-stack direction="inline" gap="small-100" alignItems="start">

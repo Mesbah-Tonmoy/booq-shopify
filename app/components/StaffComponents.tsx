@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import type { Staff, Location, StaffGroup } from '@prisma/client';
+import type { StaffWorkingHours } from '../types/staff';
+import { WorkingHoursDayEditor } from './WorkingHoursDayEditor';
+
+export type StaffFormData = Omit<Partial<Staff>, 'workingHours'> & {
+  workingHours?: StaffWorkingHours | null;
+};
 
 interface StaffFormProps {
-  formData?: Partial<Staff> | null;
+  formData?: StaffFormData | null;
   locations: Pick<Location, 'id' | 'name'>[];
   staffGroups: Pick<StaffGroup, 'id' | 'name'>[];
 }
@@ -347,6 +353,11 @@ export function StaffForm({
           </div>
         </div>
       </s-section>
+
+      <WorkingHoursDayEditor
+        initialWorkingHours={formData?.workingHours}
+        title="Working Hours"
+      />
 
       {/* BlockOut Date & Time (optional) */}
       <s-section>

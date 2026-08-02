@@ -1,7 +1,12 @@
 import type { Settings } from '@prisma/client';
 import type { WidgetSettingsState } from '../../hooks/useWidgetSettings';
+import type { HolidaySettingsState } from '../../hooks/useHolidaySettings';
 import { CollapsibleCard } from '../CollapsibleCard';
-import { WidgetPreview } from '../WidgetPreview';
+import {
+  WidgetPreview,
+  type WidgetPreviewService,
+  type WidgetPreviewStaffMember,
+} from '../WidgetPreview';
 import WorkingHoursSection from '../WorkingHours';
 import { HolidaysSection } from './HolidaysSection';
 import { CalendarSettingsSection } from './CalendarSettingsSection';
@@ -27,13 +32,29 @@ const SECTIONS_WITH_HEADER_ICON = [
 
 interface GeneralConfigTabProps {
   widgetSettings: WidgetSettingsState;
+  holidaySettings: HolidaySettingsState;
   settings?: Settings | null;
+  previewService?: WidgetPreviewService | null;
+  previewStaff?: WidgetPreviewStaffMember[];
 }
 
 export function GeneralConfigTab({
   widgetSettings,
+  holidaySettings,
   settings,
+  previewService,
+  previewStaff,
 }: GeneralConfigTabProps) {
+  const {
+    country,
+    setCountry,
+    countryEnabled,
+    setCountryEnabled,
+    enabledHolidayIds,
+    holidays,
+    toggleHoliday,
+  } = holidaySettings;
+
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="flex flex-col gap-4">
@@ -53,7 +74,16 @@ export function GeneralConfigTab({
           >
             <s-stack direction="block" gap="base">
               {section.id === 'workingHours' && <WorkingHoursSection />}
-              {section.id === 'holidays' && <HolidaysSection />}
+              {section.id === 'holidays' && (
+                <HolidaysSection
+                  country={country}
+                  setCountry={setCountry}
+                  countryEnabled={countryEnabled}
+                  setCountryEnabled={setCountryEnabled}
+                  holidays={holidays}
+                  toggleHoliday={toggleHoliday}
+                />
+              )}
               {section.id === 'calendarSettings' && <CalendarSettingsSection />}
               {section.id === 'dateTimeFormats' && (
                 <DateTimeFormatsSection settings={settings} />
@@ -69,7 +99,22 @@ export function GeneralConfigTab({
         ))}
       </div>
 
-      <WidgetPreview {...widgetSettings} />
+      <div>
+        <WidgetPreview
+          {...widgetSettings}
+          service={previewService}
+          staff={previewStaff}
+        />
+        <input
+          type="hidden"
+          name="holidaySettings"
+          value={JSON.stringify({
+            country,
+            enabled: countryEnabled,
+            enabledHolidayIds,
+          })}
+        />
+      </div>
     </div>
   );
 }

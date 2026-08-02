@@ -11,9 +11,12 @@ import { boundary } from '@shopify/shopify-app-react-router/server';
 import { authenticate } from '../shopify.server';
 import prisma from '../db.server';
 import { getInt, getString } from '../utils/formData';
+import type { Prisma } from '@prisma/client';
+import type { StaffDayHours } from '../types/staff';
 import {
   StaffForm,
   StaffListItem,
+  type StaffFormData,
   type StaffWithRelations,
 } from '../components/StaffComponents';
 import type { Route } from './+types/app.staff';
@@ -106,6 +109,40 @@ export const action = async ({ request }: Route.ActionArgs) => {
   const locationId = getInt(formData, 'locationId');
   const staffGroupId = getInt(formData, 'staffGroupId');
 
+  // Build workingHours JSON
+  const workingHours: Record<string, StaffDayHours> = {};
+  const days = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
+
+  days.forEach((day) => {
+    const isOpen = getString(formData, `workingHours_${day}_open`) === 'on';
+    const dayBreakEnabled =
+      getString(formData, `workingHours_${day}_breakEnabled`) === 'on';
+    workingHours[day] = {
+      open: isOpen,
+      start: isOpen
+        ? getString(formData, `workingHours_${day}_start`) || '09:00'
+        : undefined,
+      end: isOpen
+        ? getString(formData, `workingHours_${day}_end`) || '17:00'
+        : undefined,
+      breakEnabled: dayBreakEnabled,
+      breakStart: dayBreakEnabled
+        ? getString(formData, `workingHours_${day}_breakStart`) || '12:00'
+        : undefined,
+      breakEnd: dayBreakEnabled
+        ? getString(formData, `workingHours_${day}_breakEnd`) || '13:00'
+        : undefined,
+    };
+  });
+
   const staffData = {
     name: name.trim(),
     email,
@@ -119,6 +156,9 @@ export const action = async ({ request }: Route.ActionArgs) => {
     shopId: shop.id,
     locationId,
     staffGroupId,
+    // Prisma's JSON input types require an index signature our domain
+    // interfaces don't have; this is always a plain JSON-serializable object.
+    workingHours: workingHours as unknown as Prisma.InputJsonValue,
   };
 
   if (staffId && staffId !== 'new') {
@@ -234,7 +274,9 @@ export default function StaffPage() {
           {/* Left Column - Form */}
           <s-grid-item gridColumn="span 5">
             <StaffForm
-              formData={editingStaff ?? undefined}
+              formData={
+                (editingStaff as unknown as StaffFormData | null) ?? undefined
+              }
               locations={locations}
               staffGroups={staffGroups}
             />

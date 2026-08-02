@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLoaderData } from 'react-router';
+import { useLoaderData, useNavigate } from 'react-router';
 import { boundary } from '@shopify/shopify-app-react-router/server';
 import { authenticate } from '../shopify.server';
 import prisma from '../db.server';
@@ -17,6 +17,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import { CollapsibleCard } from '../components/CollapsibleCard';
 import { SetupGuide } from '../components/SetupGuide';
+import { getMockBookingStats } from '../data/mockBookings';
 import type { Service } from '@prisma/client';
 import type { Route } from './+types/app._index';
 
@@ -55,16 +56,20 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     where: { shopId: shop.id },
   });
 
+  const locations = await prisma.location.findMany({
+    where: { shopId: shop.id },
+  });
+
   const settings = await prisma.settings.findUnique({
     where: { shopId: shop.id },
   });
 
   const setupSteps = {
-    createLocation: false,
+    createLocation: locations.length > 0,
     addStaffMember: staffs.length > 0,
     createService: services.length > 0,
     customizeBookingWidget: !!settings?.widgetSettings,
-    confirmEmailSettings: !!settings?.emailConfig,
+    confirmEmailSettings: !!settings?.emailTemplates,
   };
 
   const completedSteps = Object.values(setupSteps).filter(Boolean).length;
@@ -78,6 +83,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
       activeServices: services.filter((s: Service) => s.status === 'active')
         .length,
     },
+    bookingStats: getMockBookingStats(),
     setupProgress: {
       completed: completedSteps,
       total: totalSteps,
@@ -88,39 +94,76 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 };
 
 export default function Index() {
-  const { setupProgress } = useLoaderData<typeof loader>();
+  const { shop, stats, bookingStats, setupProgress } =
+    useLoaderData<typeof loader>();
+  const navigate = useNavigate();
   const [showSetupGuide, setShowSetupGuide] = useState(true);
   const [activeStepId, setActiveStepId] = useState<string | null>('step-1');
+
+  const { steps } = setupProgress;
 
   const setupStepsData = [
     {
       id: 'step-1',
-      title: 'Create preorder campaign',
-      description: 'Customize Widgets and choose products for your campaigns.',
-      actions: <s-button variant="primary">Create preorder campaign</s-button>,
+      title: 'Add a location',
+      description:
+        'Set where your services are provided, along with hours, capacity, and contact details.',
+      completed: steps.createLocation,
+      actions: (
+        <s-button variant="primary" onClick={() => navigate('/app/location')}>
+          Add a location
+        </s-button>
+      ),
     },
     {
       id: 'step-2',
-      title: 'Activate app embed in shopify',
+      title: 'Add a staff member',
       description:
-        "You need to activate the appp in your store's theme settigns. this make the preorder button appear on your site",
+        'Add the people who provide your services so customers can book with them.',
+      completed: steps.addStaffMember,
       actions: (
-        <s-stack direction="inline" gap="base small-300">
-          <s-button variant="primary">Activate</s-button>
-          <s-button variant="primary">I&apos;ve done it</s-button>
-        </s-stack>
+        <s-button variant="primary" onClick={() => navigate('/app/staff')}>
+          Add staff
+        </s-button>
       ),
     },
     {
       id: 'step-3',
-      title: 'Confirm app is working properly',
+      title: 'Create a service',
       description:
-        "Finish the steps above, preview it in store to confirm that it's working properly. Let us know if you run into issues or need design tweaks.",
+        'Link a Shopify product to a bookable service and configure its available slots.',
+      completed: steps.createService,
       actions: (
-        <s-stack direction="inline" gap="base small-300">
-          <s-button variant="primary">Everything is great</s-button>
-          <s-button variant="primary">Contact support</s-button>
-        </s-stack>
+        <s-button
+          variant="primary"
+          onClick={() => navigate('/app/service/new')}
+        >
+          Create a service
+        </s-button>
+      ),
+    },
+    {
+      id: 'step-4',
+      title: 'Customize your booking widget',
+      description:
+        'Choose what customers see when booking — pricing, staff photos, reviews, and more.',
+      completed: steps.customizeBookingWidget,
+      actions: (
+        <s-button variant="primary" onClick={() => navigate('/app/settings')}>
+          Customize widget
+        </s-button>
+      ),
+    },
+    {
+      id: 'step-5',
+      title: 'Set up email templates',
+      description:
+        'Write the confirmation, reminder, and cancellation emails your customers will receive.',
+      completed: steps.confirmEmailSettings,
+      actions: (
+        <s-button variant="primary" onClick={() => navigate('/app/settings')}>
+          Edit templates
+        </s-button>
       ),
     },
   ];
@@ -138,8 +181,8 @@ export default function Index() {
     datasets: [
       {
         fill: true,
-        label: 'Data Value',
-        data: [10, 15, 8, 12, 6, 18, 10, 14, 8, 16, 5], // Example data points
+        label: 'Sample bookings',
+        data: [10, 15, 8, 12, 6, 18, 10, 14, 8, 16, 5], // Illustrative sample data
         borderColor: 'rgb(53, 162, 235)',
         backgroundColor: 'rgba(53, 162, 235, 0.2)',
         tension: 0.4,
@@ -148,8 +191,8 @@ export default function Index() {
       },
       {
         fill: true,
-        label: 'Previous Period',
-        data: [8, 12, 10, 14, 8, 10, 6, 12, 9, 13, 7], // Example comparison data
+        label: 'Previous period (sample)',
+        data: [8, 12, 10, 14, 8, 10, 6, 12, 9, 13, 7], // Illustrative sample data
         borderColor: 'rgba(53, 162, 235, 0.4)',
         backgroundColor: 'rgba(53, 162, 235, 0.1)',
         tension: 0.4,
@@ -228,20 +271,30 @@ export default function Index() {
           alignItems="center"
         >
           <s-heading>Welcome to Booqly</s-heading>
-          <s-box>
-            <s-select>
-              <s-option value="English">English</s-option>
-              <s-option value="Hindi">Hindi</s-option>
-              <s-option value="Arabic">Arabic</s-option>
-            </s-select>
-          </s-box>
+          <s-text color="subdued">
+            {stats.activeServices} active service
+            {stats.activeServices === 1 ? '' : 's'} · {stats.staff} staff member
+            {stats.staff === 1 ? '' : 's'}
+          </s-text>
         </s-stack>
 
         <s-banner heading="Enable Booqly in your Theme Editor" tone="warning">
           Our Widget will only work when the Booqly app embed is enabled in your
           theme. This is Shopify&apos;s recommended way to use an app in the
           online store.
-          <s-switch id="basic-switch" label="Enable Booqly" />
+          <div style={{ marginTop: '0.5rem' }}>
+            <s-button
+              variant="primary"
+              onClick={() =>
+                window.open(
+                  `https://${shop.domain}/admin/themes/current/editor`,
+                  '_top'
+                )
+              }
+            >
+              Enable in Theme Editor
+            </s-button>
+          </div>
         </s-banner>
 
         {showSetupGuide && (
@@ -279,6 +332,11 @@ export default function Index() {
           </CollapsibleCard>
         )}
 
+        <s-text color="subdued">
+          Sample booking data — see the{' '}
+          <s-link href="/app/bookings">Bookings</s-link> page.
+        </s-text>
+
         <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="base">
           <s-grid-item gridColumn="span 3">
             <s-section>
@@ -292,7 +350,7 @@ export default function Index() {
                   <s-icon type="check" tone="success"></s-icon>
                 </s-stack>
                 <s-text color="subdued">Appointments approved</s-text>
-                <s-heading>214</s-heading>
+                <s-heading>{bookingStats.confirmed}</s-heading>
               </s-stack>
             </s-section>
           </s-grid-item>
@@ -307,8 +365,8 @@ export default function Index() {
                   <s-heading>Pending Appointments</s-heading>
                   <s-icon type="clock" tone="warning"></s-icon>
                 </s-stack>
-                <s-text color="subdued">Appointments approved</s-text>
-                <s-heading>3</s-heading>
+                <s-text color="subdued">Awaiting confirmation</s-text>
+                <s-heading>{bookingStats.pending}</s-heading>
               </s-stack>
             </s-section>
           </s-grid-item>
@@ -323,8 +381,8 @@ export default function Index() {
                   <s-heading>Total Appointments</s-heading>
                   <s-icon type="calendar-check" tone="info"></s-icon>
                 </s-stack>
-                <s-text color="subdued">Appointments approved</s-text>
-                <s-heading>217</s-heading>
+                <s-text color="subdued">All-time bookings</s-text>
+                <s-heading>{bookingStats.total}</s-heading>
               </s-stack>
             </s-section>
           </s-grid-item>
@@ -339,8 +397,8 @@ export default function Index() {
                   <s-heading>Cancelled Appointments</s-heading>
                   <s-icon type="alert-circle" tone="critical"></s-icon>
                 </s-stack>
-                <s-text color="subdued">Appointments approved</s-text>
-                <s-heading>0</s-heading>
+                <s-text color="subdued">Cancelled by customer</s-text>
+                <s-heading>{bookingStats.cancelled}</s-heading>
               </s-stack>
             </s-section>
           </s-grid-item>
@@ -348,27 +406,13 @@ export default function Index() {
 
         <s-section>
           <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-900">Data Value</h3>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-3xl font-bold text-gray-900">39.71%</span>
-              <span className="text-sm font-medium text-teal-600 flex items-center">
-                <svg
-                  className="w-3 h-3 mr-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 10l7-7m0 0l7 7m-7-7v18"
-                  />
-                </svg>
-                5%
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 mt-1">Data Visualization</p>
+            <h3 className="text-lg font-medium text-gray-900">
+              Sample booking trend
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Illustrative chart — this will chart real booking volume once
+              customers start booking through your widget.
+            </p>
           </div>
 
           <div style={{ height: '300px', width: '100%' }}>

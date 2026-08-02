@@ -76,12 +76,17 @@ function CalendarIntegrationRow({
       <s-stack direction="inline" alignItems="center" gap="small-100">
         {icon}
         <s-stack direction="block" gap="small-0">
-          <s-text color="subdued">{title}</s-text>
+          <s-stack direction="inline" alignItems="center" gap="small-100">
+            <s-text color="subdued">{title}</s-text>
+            <s-badge tone="info">Coming soon</s-badge>
+          </s-stack>
           <s-text color="subdued">{subtitle}</s-text>
         </s-stack>
       </s-stack>
 
-      <s-button variant="primary">Connect</s-button>
+      <s-button variant="primary" disabled>
+        Connect
+      </s-button>
     </s-stack>
   );
 }
@@ -89,6 +94,10 @@ function CalendarIntegrationRow({
 export function CalendarSettingsSection() {
   return (
     <s-stack direction="block" gap="base">
+      <s-text color="subdued">
+        Calendar sync is coming in a future release — connect Google or Outlook
+        to automatically block out busy times.
+      </s-text>
       <CalendarIntegrationRow
         icon={<GoogleCalendarIcon />}
         title="Google Calendar"

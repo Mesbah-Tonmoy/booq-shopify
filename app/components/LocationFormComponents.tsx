@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Location } from '@prisma/client';
 import type { LocationAddress, LocationWorkingHours } from '../types/location';
+import { WorkingHoursDayEditor } from './WorkingHoursDayEditor';
 
 export type LocationFormData = Omit<
   Partial<Location>,
@@ -9,16 +10,6 @@ export type LocationFormData = Omit<
   address?: LocationAddress | null;
   workingHours?: LocationWorkingHours | null;
 };
-
-const DAYS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
 
 interface BasicInformationTabProps {
   formData?: LocationFormData;
@@ -261,81 +252,6 @@ interface AdvancedSettingsTabProps {
 export function AdvancedSettingsTab({
   formData = {},
 }: AdvancedSettingsTabProps) {
-  const workingHours = formData?.workingHours || {};
-
-  const buildInitialOpenDays = () => {
-    const initial: Record<string, boolean> = {};
-    DAYS.forEach((day) => {
-      const dayData = workingHours[day.toLowerCase()];
-      initial[day.toLowerCase()] =
-        dayData?.open ??
-        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day);
-    });
-    return initial;
-  };
-
-  const buildInitialBreakEnabled = () => {
-    const initial: Record<string, boolean> = {};
-    DAYS.forEach((day) => {
-      const dayData = workingHours[day.toLowerCase()];
-      initial[day.toLowerCase()] = dayData?.breakEnabled ?? false;
-    });
-    return initial;
-  };
-
-  const [openDays, setOpenDays] =
-    useState<Record<string, boolean>>(buildInitialOpenDays);
-
-  const [breakEnabled, setBreakEnabled] = useState<Record<string, boolean>>(
-    buildInitialBreakEnabled
-  );
-
-  const [showEdits, setShowEdits] = useState(true);
-
-  // Sync state when formData changes (when editing a different location)
-  useEffect(() => {
-    const wh = formData?.workingHours || {};
-    const openInitial: Record<string, boolean> = {};
-    const breakInitial: Record<string, boolean> = {};
-    DAYS.forEach((day) => {
-      const dayData = wh[day.toLowerCase()];
-      openInitial[day.toLowerCase()] =
-        dayData?.open ??
-        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day);
-      breakInitial[day.toLowerCase()] = dayData?.breakEnabled ?? false;
-    });
-    setOpenDays(openInitial);
-    setBreakEnabled(breakInitial);
-  }, [formData]);
-
-  const getWorkingHourData = (day: string) => {
-    const dayData = workingHours[day.toLowerCase()];
-    return {
-      open:
-        dayData?.open ??
-        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day),
-      start: dayData?.start || '09:00',
-      end: dayData?.end || '17:00',
-      breakEnabled: dayData?.breakEnabled ?? false,
-      breakStart: dayData?.breakStart || '12:00',
-      breakEnd: dayData?.breakEnd || '13:00',
-    };
-  };
-
-  const handleCheckboxChange = (day: string, checked: boolean) => {
-    setOpenDays((prev) => ({
-      ...prev,
-      [day.toLowerCase()]: checked,
-    }));
-  };
-
-  const handleBreakChange = (day: string, checked: boolean) => {
-    setBreakEnabled((prev) => ({
-      ...prev,
-      [day.toLowerCase()]: checked,
-    }));
-  };
-
   return (
     <s-stack direction="block" gap="small">
       {/* Capacity Settings */}
@@ -354,159 +270,7 @@ export function AdvancedSettingsTab({
         </s-form-field>
       </s-section>
 
-      {/* Working Hours */}
-      <s-section>
-        <div>
-          <s-stack
-            direction="inline"
-            alignItems="center"
-            justifyContent="space-between"
-            gap="base"
-          >
-            <s-heading>Working Hours</s-heading>
-            <s-button
-              variant="tertiary"
-              onClick={() => setShowEdits(!showEdits)}
-            >
-              {showEdits ? 'Hide Edits' : 'Show Edits'}
-            </s-button>
-          </s-stack>
-        </div>
-
-        {showEdits && (
-          <div style={{ marginTop: '10px' }}>
-            <s-stack direction="block" gap="base">
-              {DAYS.map((day) => {
-                const dayData = getWorkingHourData(day);
-                const isOpen = openDays[day.toLowerCase()];
-                const hasBreak = breakEnabled[day.toLowerCase()];
-
-                return (
-                  <div
-                    key={day}
-                    style={{
-                      backgroundColor: '#f6f6f7',
-                      borderRadius: '8px',
-                      padding: '1rem',
-                      border: '2px solid #e3e3e3',
-                    }}
-                  >
-                    {/* Day name and Open checkbox */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <s-text>{day}</s-text>
-                      <s-checkbox
-                        label="Open"
-                        name={`workingHours_${day.toLowerCase()}_open`}
-                        checked={isOpen}
-                        onChange={(e) =>
-                          handleCheckboxChange(day, e.currentTarget.checked)
-                        }
-                      />
-                    </div>
-
-                    {isOpen && (
-                      <div style={{ marginTop: '1rem' }}>
-                        {/* Start and End Time */}
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: '1rem',
-                            marginBottom: '1rem',
-                          }}
-                        >
-                          <div>
-                            <div style={{ marginBottom: '0.5rem' }}>
-                              <s-text>Start Date</s-text>
-                            </div>
-                            <s-text-field
-                              name={`workingHours_${day.toLowerCase()}_start`}
-                              {...(dayData.start
-                                ? { value: dayData.start }
-                                : { value: '09:00' })}
-                            />
-                          </div>
-                          <div>
-                            <div style={{ marginBottom: '0.5rem' }}>
-                              <s-text>End Time</s-text>
-                            </div>
-                            <s-text-field
-                              name={`workingHours_${day.toLowerCase()}_end`}
-                              {...(dayData.end
-                                ? { value: dayData.end }
-                                : { value: '17:00' })}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Break Time Checkbox */}
-                        <div style={{ marginBottom: hasBreak ? '1rem' : '0' }}>
-                          <s-checkbox
-                            label="Break Time (Optional)"
-                            name={`workingHours_${day.toLowerCase()}_breakEnabled`}
-                            checked={hasBreak}
-                            onChange={(e) =>
-                              handleBreakChange(day, e.currentTarget.checked)
-                            }
-                          />
-                        </div>
-
-                        {/* Break Time Fields */}
-                        {hasBreak && (
-                          <div
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '1fr 1fr',
-                              gap: '1rem',
-                            }}
-                          >
-                            <div>
-                              <div style={{ marginBottom: '0.5rem' }}>
-                                <s-text>Start time</s-text>
-                              </div>
-                              <s-text-field
-                                name={`workingHours_${day.toLowerCase()}_breakStart`}
-                                {...(dayData.breakStart
-                                  ? { value: dayData.breakStart }
-                                  : { value: '12:00' })}
-                              />
-                              <div style={{ marginTop: '0.25rem' }}>
-                                <s-text color="subdued">
-                                  When break starts
-                                </s-text>
-                              </div>
-                            </div>
-                            <div>
-                              <div style={{ marginBottom: '0.5rem' }}>
-                                <s-text>End Time</s-text>
-                              </div>
-                              <s-text-field
-                                name={`workingHours_${day.toLowerCase()}_breakEnd`}
-                                {...(dayData.breakEnd
-                                  ? { value: dayData.breakEnd }
-                                  : { value: '13:00' })}
-                              />
-                              <div style={{ marginTop: '0.25rem' }}>
-                                <s-text color="subdued">When break ends</s-text>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </s-stack>
-          </div>
-        )}
-      </s-section>
+      <WorkingHoursDayEditor initialWorkingHours={formData?.workingHours} />
 
       {/* Additional Information */}
       <s-section>

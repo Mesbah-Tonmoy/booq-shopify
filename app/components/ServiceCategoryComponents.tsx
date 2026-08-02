@@ -64,9 +64,13 @@ export function ServiceCategoryForm({ formData }: ServiceCategoryFormProps) {
   );
 }
 
+export type ServiceCategoryWithCount = ServiceCategory & {
+  serviceCount: number;
+};
+
 interface ServiceCategoryListItemProps {
-  serviceCategory: ServiceCategory;
-  onEdit: (serviceCategory: ServiceCategory) => void;
+  serviceCategory: ServiceCategoryWithCount;
+  onEdit: (serviceCategory: ServiceCategoryWithCount) => void;
   onDelete: (id: number) => void;
 }
 
@@ -79,8 +83,7 @@ export function ServiceCategoryListItem({
   const popoverId = `service-category-actions-${serviceCategory.id}`;
   const modalId = `delete-modal-${serviceCategory.id}`;
 
-  // Placeholder service count (would come from actual services in production)
-  const serviceCount: number = 0;
+  const serviceCount = serviceCategory.serviceCount;
   const serviceLabel = serviceCount === 1 ? 'Service' : 'Services';
 
   return (
